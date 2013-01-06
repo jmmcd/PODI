@@ -1,0 +1,10 @@
+# generate a program that processes a string to produce another string
+
+# use regular expressions, substrings, etc
+
+# see Gulwani et al -- maybe copy the entire grammar from there.
+
+<p> ::= <def_branches>{}<def_execute>{}execute(s)
+<def_branches> ::= branches = [<branch>, <branch>, <branch>]
+<branch> ::= (<cond>, <action>)
+<def_execute> ::= def execute(s){:for branch in branches{:c, a = branch; if c(s){:return a(s):}:}return s:}
