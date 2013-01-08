@@ -29,17 +29,16 @@ McDermott and Carroll, *Program Optimisation with Dependency
 Injection*, in *Proceedings of EuroGP 2013*, Vienna, Austria,
 Springer.
 
-Abstract: A highly general evolutionary algorithm is introduced, named
-*program optimisation with dependency injection*. It can be used to
-search among the possible outputs of any non-deterministic program, as
-follows. The program's random number generator is replaced by a
-non-random number generator: this is dependency injection. The
-non-random numbers are supplied by genomes under the control of a
-genetic algorithm. The program can then be seen as a genome-phenotype
-mapping. It is demonstrated that suitable programs include the
-derivation program used in grammatical evolution, two tree-growing
-functions useful for genetic programming, and generative programs in
-the domains of 3D design and communications network design.
+Abstract: For many real-world problems, there exist non-deterministic
+heuristics which generate valid but possibly sub-optimal
+solutions. The *program optimisation with dependency injection*
+method, introduced here, allows such a heuristic to be placed under
+evolutionary control, allowing search for the optimum. Essentially,
+the heuristic is "fooled" into using a genome, supplied by a genetic
+algorithm, in place of the output of its random number generator. The
+method is demonstrated with generative heuristics in the domains of 3D
+design and communications network design. It is also used in novel
+approaches to genetic programming.
 
 Authors: James McDermott and Paula Carroll, Management Information
 Systems, Quinn School of Business, University College Dublin, Ireland.
