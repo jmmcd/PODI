@@ -101,6 +101,13 @@ def choose_child(weights, val):
         return len(weights)
     return 0 # because weights is of len 0
 
+def bubble_down_minn_maxn(minn, maxn, rng):
+    """Generate a tree whose node-count is between the bounds minn and
+    maxn (or exceeds maxn by up to (maximum arity - 1). We can fix
+    bounds in advance, and let evolution control tree size."""
+    n = rng.randint(minn, maxn)
+    return bubble_down(n, rng)    
+
 def bubble_down(n, rng):
     """Generate a tree of the desired node-count (can exceed it by up
     to (maximum arity - 1). See
@@ -200,23 +207,27 @@ def semantic_distance(v, u):
     except TypeError as e:
         print("TypeError in distances", e)
         return 0.0
-        
+
+def generate_bubble_down_tree_and_fn_minn_maxn(minn, maxn, rng):
+    t, d, n = bubble_down_minn_maxn(minn, maxn, rng)
+    return t, make_fn(t)
 
 def generate_bubble_down_tree_and_fn(rng):
     t, d, n = bubble_down(30, rng)
     return t, make_fn(t)
 
+generate_bubble_down_fn = (
+    lambda rng: generate_bubble_down_tree_and_fn(rng)[1])
+
+generate_bubble_down_fn_minn_maxn = (
+    lambda minn, maxn, rng:
+        generate_bubble_down_tree_and_fn_minn_maxn(minn, maxn, rng)[1])
+
 def generate_grow_tree_and_fn(rng):
     t = grow(6, rng)
     return t, make_fn(t)
 
-def generate_bubble_down_fn(rng):
-    t, d, n = bubble_down(30, rng)
-    return make_fn(t)
-
-def generate_grow_fn(rng):
-    t = grow(6, rng)
-    return make_fn(t)
+generate_grow_fn = lambda rng: generate_grow_tree_and_fn(rng)[1]
 
 def success(err):
     return False # let's just keep running so all runs are same length
