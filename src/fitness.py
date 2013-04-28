@@ -11,7 +11,7 @@ np.seterr(all='raise')
 try:
     import editdist
 except:
-    # StringMatch won't be available.
+    # StringMatch won't be available. Try: $ pip install editdist
     pass
 
 def eval_or_exec(expr):
@@ -54,11 +54,12 @@ def default_fitness(maximise):
 class RandomFitness:
     """Useful for investigating algorithm dynamics in the absence of
     selection pressure. Fitness is random."""
-
     def __call__(self, ind):
         """Allow objects of this type to be called as if they were
         functions. Return a random value as fitness."""
         return random.random()
+    def test(self, candidate):
+        return self(candidate)
 
 class SizeFitness:
     """Useful for investigating control of tree size. Return the
@@ -71,12 +72,16 @@ class SizeFitness:
         """Allow objects of this type to be called as if they were
         functions."""
         return abs(self.target_size - len(ind))
+    def test(self, candidate):
+        return self(candidate)
 
 class MaxFitness():
     """Arithmetic maximisation with python evaluation."""
     maximise = True
     def __call__(self, candidate):
         return eval_or_exec(candidate)
+    def test(self, candidate):
+        return self(candidate)
 
 class StringMatch():
     """Fitness function for matching a string. Takes a string and
@@ -88,6 +93,8 @@ class StringMatch():
         self.target = target
     def __call__(self, guess):
         return editdist.distance(self.target, guess)
+    def test(self, candidate):
+        return self(candidate)
 
 class StringProc():
     """Fitness function for programs that process strings, ie they
@@ -100,6 +107,9 @@ class StringProc():
         for input, output in self.test_cases:
             fitness += editdist(output, p(input))
         return fitness
+    def test(self, candidate):
+        # TODO should allow for a proper train/test suite
+        return self(candidate)
 
 class BooleanProblem:
     """Boolean problem of size n. Pass target function in.
@@ -133,6 +143,10 @@ class BooleanProblem:
         output = fn(self.x)
         non_matches = output ^ self.target_cases
         return sum(non_matches) # Fitness is number of errors
+    
+    def test(self, candidate):
+        # TODO should allow for a proper train/test suite
+        return self(candidate)
 
 class BooleanProblemGeneral:
     """A compound problem. It consists of a single Boolean problem, at
@@ -157,44 +171,15 @@ class SymbolicRegressionFitnessFunction:
     (http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html).
     The reason is that the function needs some extra data to go with
     it: an arity, a list of bounds and increments to create the test
-    cases. TODO could use correlation coefficient instead of RMSE. TODO
-    Make a field to indicate what error metric we are using. TODO
-    allow reading fitness cases, either just x-values or both x and
-    y-values, from a file. TODO could report hits."""
+    cases."""
 
-    def __init__(self, target, train, test1=None, test2=None, defn="rmse"):
-        """Pass in a target function and parameters for building the
-        fitness cases for input variables for training and for testing
-        if necessary. The cases are specified as a dictionary
-        containing bounds and other variables: either a regular mesh
-        over the ranges or randomly-generated points within the ranges
-        can be generated. We allow one set of cases for training, and
-        zero, one or two for testing, because several of our benchmark
-        functions need two discontinuous ranges for testing data. If
-        no testing cases are specified, the training data is used for
-        testing as well. Can pass a keyword indicating the fitness
-        definition, which can be 'rmse' (minimise root mean square
-        error), 'correlation' (minimise 1-r**2), or 'hits' (maximise
-        number of fitness cases within a small threshold). """
-
-        # Training data
-        self.cases = self.build_column_mesh_np(self.build_cases(**train))
-        self.values = target(self.cases)
-
-        # Testing data -- FIXME this could be neater.
-        if test1 and test2:
-            self.testing_cases = self.build_column_mesh_np(self.build_cases(**test1) + 
-                                                           self.build_cases(**test2))
-            self.testing_values = target(self.testing_cases)
-        elif test1:
-            self.testing_cases = self.build_column_mesh_np(self.build_cases(**test1))
-            self.testing_values = target(self.testing_cases)
-        else:
-            # No special testing cases -- use training cases
-            self.testing_cases = self.cases
-            self.testing_values = self.values
-
-        self.arity = target.func_code.co_argcount
+    def __init__(self, train_X, train_y, test_X=None, test_y=None,
+                 defn="rmse"):
+        self.train_X = train_X
+        self.train_y = train_y
+        self.test_X = test_X
+        self.test_y = test_y
+        self.arity = len(train_X)
         if defn == "rmse":
             self.maximise = False
             self.defn = self.rmse
@@ -206,17 +191,80 @@ class SymbolicRegressionFitnessFunction:
             self.defn = self.hits_fitness
         else:
             raise ValueError("Bad value for fitness definition: " + defn)
-            
+
+
+    @classmethod
+    def init_from_data_file(cls, filename, split=0.9,
+                            randomise=False, defn="rmse"):
+        """Construct an SRFF by reading data from a file. Split the
+        data according to split, eg 0.9 means 90% for training, 10%
+        for testing. If randomise is True, take random rows; else take
+        the last rows as test data. TODO: allow more flexibile
+        test/train splits?"""
+        d = np.genfromtxt(filename)
+        if randomise:
+            # this shuffles the rows
+            np.random.shuffle(d)
+        dX = d[:,:-1]
+        dy = d[:,-1]
+        idx = int(split * len(d))
+        train_X = dX[:idx].T
+        train_y = dy[:idx]
+        test_X = dX[idx:].T
+        test_y = dy[idx:]
+        print("shapes", train_X.shape, train_y.shape, test_X.shape, test_y.shape)
+        return SymbolicRegressionFitnessFunction(train_X, train_y,
+                                                 test_X, test_y, defn)
+
+    @classmethod
+    def init_from_target_fn(cls, target, train, test1=None, test2=None, defn="rmse"):
+        """Pass in a target function and parameters for building the
+        fitness cases for input variables for training and for testing
+        if necessary. The cases are specified as a dictionary
+        containing bounds and other variables: either a regular mesh
+        over the ranges or randomly-generated points within the ranges
+        can be generated. We allow one set of cases for training, and
+        zero, one or two for testing, because several of our benchmark
+        functions need two discontinuous ranges for testing data. If
+        no testing cases are specified, the training data is used for
+        testing as well.
+
+        Can pass a keyword indicating the fitness definition, which
+        can be 'rmse' (minimise root mean square error), 'correlation'
+        (minimise 1-r**2), or 'hits' (maximise number of fitness cases
+        within a small threshold)."""
+
+        # Training data
+        cases = cls.build_column_mesh_np(cls.build_cases(**train))
+        values = target(cases)
+
+        # Testing data -- FIXME this could be neater.
+        if test1 and test2:
+            testing_cases = cls.build_column_mesh_np(cls.build_cases(**test1) + 
+                                                           cls.build_cases(**test2))
+            testing_values = target(testing_cases)
+        elif test1:
+            testing_cases = cls.build_column_mesh_np(cls.build_cases(**test1))
+            testing_values = target(testing_cases)
+        else:
+            # No special testing cases -- use training cases
+            testing_cases = cases
+            testing_values = values
+        return SymbolicRegressionFitnessFunction(cases, values,
+                                                 testing_cases,
+                                                 testing_values, defn)
+
 
     def __call__(self, fn):
         """Allow objects of this type to be called as if they were
         functions. Return just a fitness value."""
         return self.get_semantics(fn)[0]
     
-    def get_semantics(self, fn):
-        """Run the function over the test cases. Return the fitness
-        and the vector of results (the "semantics" of the
-        function). Return (default_fitness, None) on error."""
+    def get_semantics(self, fn, test=False):
+        """Run the function over the training set. Return the fitness
+        and the vector of results (the "semantics" of the function).
+        Return (default_fitness, None) on error. Pass test=True to run
+        the function over the testing set instead."""
         if not callable(fn):
             # assume fn is a string which evals to a function.
             try:
@@ -224,11 +272,18 @@ class SymbolicRegressionFitnessFunction:
             except MemoryError:
                 return default_fitness(self.maximise), None
         try:
-            assert(self.values is not None)
-            vals_at_cases = fn(self.cases)
-            assert(vals_at_cases is not None)
-            fit = self.defn(self.values, vals_at_cases)
-            return fit, vals_at_cases
+            if not test:
+                assert(self.train_y is not None)
+                vals_at_cases = fn(self.train_X)
+                assert(vals_at_cases is not None)
+                fit = self.defn(self.train_y, vals_at_cases)
+                return fit, vals_at_cases
+            else:
+                assert(self.test_y is not None)
+                vals_at_cases = fn(self.test_X)
+                assert(vals_at_cases is not None)
+                fit = self.defn(self.test_y, vals_at_cases)
+                return fit, vals_at_cases
         except FloatingPointError as fpe:
             return default_fitness(self.maximise), None
         except ValueError as ve:
@@ -238,14 +293,9 @@ class SymbolicRegressionFitnessFunction:
             print("TypeError: " + str(te) +':' + str(fn))
             raise
 
-    def test(self, s):
+    def test(self, fn):
         """Test ind on unseen data. Return a fitness value."""
-        # s is a string which evals to a fn.
-        fn = eval(s)
-        try:
-            return self.defn(self.testing_values, fn(self.testing_cases))
-        except FloatingPointError:
-            return default_fitness(self.maximise)
+        return self.get_semantics(fn, True)[0]
 
     @staticmethod
     def build_cases(minv, maxv, incrv=None, randomx=None, ncases=None):
@@ -259,9 +309,10 @@ class SymbolicRegressionFitnessFunction:
 
     @staticmethod
     def rmse(x, y):
-        """Calculate root mean square error between x and y, two numpy arrays."""
+        """Calculate root mean square error between x and y, two numpy
+        arrays."""
         m = x - y
-        m = square(m)
+        m = np.square(m)
         m = np.mean(m)
         m = np.sqrt(m)
         return m
@@ -269,9 +320,7 @@ class SymbolicRegressionFitnessFunction:
     @staticmethod
     def hits_fitness(x, y):
         """Hits as fitness: how many of the errors are very small?
-        Minimise 1 - the proportion.
-
-        """
+        Minimise 1 - the proportion."""
         errors = abs(x - y)
         return 1 - np.mean(errors < 0.01)
 
@@ -366,24 +415,26 @@ class SymbolicRegressionFitnessFunction:
 
 def benchmarks():
     return {
-        "identity": SymbolicRegressionFitnessFunction(
+        "identity": SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: x,
             {"minv": [0.0], "maxv": [1.0], "incrv": [0.1]}),
         
-        "vladislavleva_12": SymbolicRegressionFitnessFunction(
+        "vladislavleva_12": SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: exp(-x[0]) * power(x[0], 3.0) * cos(x[0]) * sin(x[0]) \
                 * ((cos(x[0]) * power(sin(x[0]), 2.0)) - 1.0),
             {"minv": [0.05], "maxv": [10.0], "incrv": [0.1]}),
 
-        "pagie_2d": SymbolicRegressionFitnessFunction(
+        "pagie_2d": SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: (1 / (1 + x[0] ** -4) + 1 / (1 + x[1] ** -4)),
             {"minv": [-5, -5], "maxv": [5, 5], "incrv": [0.4, 0.4]}),
 
-        "pagie_3d": SymbolicRegressionFitnessFunction(
+        "pagie_3d": SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: (1 / (1 + x[0] ** -4) + 1 / (1 + x[1] ** -4)
                        + 1 / (1 + x[2] ** -4)),
             {"minv": [-5, -5, -5], "maxv": [5, 5, 5], "incrv": [0.4, 0.4, 0.4]}),
-
+        "vanneschi_bioavailability":
+            SymbolicRegressionFitnessFunction.init_from_data_file(
+            "../data/bioavailability.txt", split=0.7, randomise=True)
         }
    
 if __name__ == "__main__":
@@ -433,6 +484,11 @@ if __name__ == "__main__":
     elif sys.argv[1] == "test_pagie":
         sr = benchmarks()["pagie_2d"]
         g = "lambda x: (1 / (1 + x[0] ** -4) + 1 / (1 + x[1] ** -4))"
+        print(sr(g))
+
+    elif sys.argv[1] == "test_bioavailability":
+        sr = benchmarks()["vanneschi_bioavailability"]
+        g = "lambda x: x[0]*x[1]"
         print(sr(g))
         
     elif sys.argv[1] == "test_sr_mesh":

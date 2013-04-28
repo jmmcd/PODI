@@ -18,29 +18,33 @@ import variga
 # import nonrandom
 # random = nonrandom.NonRandom([999999999, 0, 17] * 100)
 
-vars = ["x", "y", "0.1", "0.2", "0.3", "0.4", "0.5"]
-fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
-
-pTerminal = 0.2 # used in grow algorithm
-
 def evaluate(t, x):
-    if   t[0] == "x": return x[0]
-    elif t[0] == "y": return x[1]
-    elif t[0] == "+": return add(evaluate(t[1], x), evaluate(t[2], x))
-    elif t[0] == "-": return subtract(evaluate(t[1], x), evaluate(t[2], x))
-    elif t[0] == "*": return multiply(evaluate(t[1], x), evaluate(t[2], x))
-    elif t[0] == "/":
-        try:
-            return divide(evaluate(t[1], x), evaluate(t[2], x))
-        except FloatingPointError:
-            return evaluate(t[1], x)
-    elif t[0] == "sin": return sin(evaluate(t[1], x))
-    elif t[0] == "cos": return cos(evaluate(t[1], x))
-    elif t[0] == "square": return square(evaluate(t[1], x))
+    if type(t) == type(""):
+        # it's a single string
+        if t[0] == "x":
+            idx = int(t[1:])
+            return x[idx] 
+        elif t == "x": return x[0]
+        elif t == "y": return x[1]
+        else:
+            try:
+                return float(t)
+            except ValueError:
+                raise ValueError("Can't interpret " + t)
     else:
-        try:
-            return float(t[0])
-        except ValueError:
+        # it's a list: take t[0] and decide what to do
+        if   t[0] == "+": return add(evaluate(t[1], x), evaluate(t[2], x))
+        elif t[0] == "-": return subtract(evaluate(t[1], x), evaluate(t[2], x))
+        elif t[0] == "*": return multiply(evaluate(t[1], x), evaluate(t[2], x))
+        elif t[0] == "/":
+            try:
+                return divide(evaluate(t[1], x), evaluate(t[2], x))
+            except FloatingPointError:
+                return evaluate(t[1], x)
+        elif t[0] == "sin": return sin(evaluate(t[1], x))
+        elif t[0] == "cos": return cos(evaluate(t[1], x))
+        elif t[0] == "square": return square(evaluate(t[1], x))
+        else:
             raise ValueError("Can't interpret " + t[0])
 
 def make_fn(t):
@@ -322,7 +326,7 @@ def run(rep="bubble_down"):
     variga.MINLEN = 100
     variga.MAXLEN = 100
     variga.PHENOTYPE_DISTANCE = tree_distance
-    variga.FITNESS = fitness_fn
+    variga.FITNESS = srff
     if rep == "bubble_down":
         variga.GENERATE = generate_bubble_down_fn
     elif rep == "grow":
@@ -331,8 +335,8 @@ def run(rep="bubble_down"):
         raise ValueError
     variga.MAXIMISE = False
     variga.SUCCESS = success
-    variga.POPSIZE = 1000
-    variga.GENERATIONS = 40
+    variga.POPSIZE = 4000
+    variga.GENERATIONS = 50
     variga.PMUT = 0.01
     variga.CROSSOVER_PROB = 0.7
     variga.ELITE = 1
@@ -346,7 +350,17 @@ def semantics(fn):
 def fitness_fn(fn):
     return srff(fn)
 
-srff = fitness.benchmarks()["pagie_2d"]
+# srff = fitness.benchmarks()["pagie_2d"]
+srff = fitness.benchmarks()["vanneschi_bioavailability"]
+# vars = ["x", "y"]
+vars = ["x" + str(i) for i in range(srff.arity)]
+consts = ["0.1", "0.2", "0.3", "0.4", "0.5"]
+vars = vars + consts
+fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
+# fns = {"+": 2, "-": 2, "*": 2, "/": 2}
+
+pTerminal = 0.2 # used in grow algorithm
+
 
 if __name__ == "__main__":
     if sys.argv[1] == "test":

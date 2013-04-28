@@ -80,6 +80,7 @@ def stats(pop, gen):
     sdlen = np.std(len_vals)
     if gen == 0:
         print("# generation evaluations best_fitness best_used_codons " +
+              "best_test_fitness " +
               "mean_fitness stddev_fitness " + 
               "mean_used_codons stddev_used_codons " +
               "mean_genome_length stddev_genome_length " +
@@ -87,6 +88,7 @@ def stats(pop, gen):
     print("{0} {1} {2} {3} {4:.2f} {5:.2f} {6:.2f} {7:.2f} {8:.2f} {9:.2f} {10} : {11}"
           .format(gen, POPSIZE * gen,
                   best[fitness_idx], best[used_idx],
+                  FITNESS.test(best[phenotype_idx]),
                   meanfit, sdfit, meanused, sdused,
                   meanlen, sdlen, ninvalids, 
                   best[phenotype_idx]))
