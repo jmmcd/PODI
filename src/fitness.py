@@ -165,6 +165,33 @@ class BooleanProblemGeneral:
         return sum([p(s) for p in self.train_problems])
     def test(self, s):
         return sum([p(s) for p in self.test_problems])
+
+
+class ProbabilityDistribution:
+    """Haven't tested this at all yet."""
+    def __init__(self, x):
+        from pymc import *
+        from scipy.stats import ks_2samp
+        self.x = x
+
+    def __call__(self, fn):
+        if not callable(fn):
+            # assume fn is a string which evals to a function.
+            try:
+                fn = eval(fn)
+            except MemoryError:
+                return default_fitness(self.maximise), None
+
+        fn_data = [fn() for i in range(100)]
+        # test against our data
+        return ks_2samp(self.x, fn_data)
+
+    def unused_for_call(self, fn):
+        # the right way to do this is to parse fn to get a PyMC model,
+        # then fit it, then see how well it does in either a PyMC
+        # goodness of fit test, or just the ks_2samp as above.
+        pass
+    
     
 class SymbolicRegressionFitnessFunction:
     """Fitness function for symbolic regression problems. Yes, it's a
