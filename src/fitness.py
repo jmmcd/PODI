@@ -14,6 +14,7 @@ except:
     # StringMatch won't be available. Try: $ pip install editdist
     pass
 
+
 def eval_or_exec(expr):
     """Use eval or exec to interpret expr.
 
@@ -259,12 +260,13 @@ class SymbolicRegressionFitnessFunction:
         """Allow objects of this type to be called as if they were
         functions. Return just a fitness value."""
         return self.get_semantics(fn)[0]
-    
+
     def get_semantics(self, fn, test=False):
         """Run the function over the training set. Return the fitness
         and the vector of results (the "semantics" of the function).
         Return (default_fitness, None) on error. Pass test=True to run
-        the function over the testing set instead."""
+        the function over the testing set instead. TODO try
+        memoizing."""
         if not callable(fn):
             # assume fn is a string which evals to a function.
             try:
@@ -436,7 +438,8 @@ def benchmarks():
             SymbolicRegressionFitnessFunction.init_from_data_file(
             "../data/bioavailability.txt", split=0.7, randomise=True)
         }
-   
+
+    
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         print("Usage: fitness.py <keyword>.")
