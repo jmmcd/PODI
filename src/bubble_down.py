@@ -26,6 +26,8 @@ def evaluate(t, x):
             return x[idx] 
         elif t == "x": return x[0]
         elif t == "y": return x[1]
+        # special var generates a random number uniformly in [0, 1]
+        elif t == "RAND": return random.random()
         else:
             try:
                 return float(t)
@@ -322,11 +324,11 @@ def test_grow():
     for i in range(7):
         print(grow(i, random))
 
-def run(rep="bubble_down"):
+def run(fitness_fn, rep="bubble_down"):
     variga.MINLEN = 100
     variga.MAXLEN = 100
     variga.PHENOTYPE_DISTANCE = tree_distance
-    variga.FITNESS = srff
+    variga.FITNESS = fitness_fn
     if rep == "bubble_down":
         variga.GENERATE = generate_bubble_down_fn
     elif rep == "grow":
@@ -335,8 +337,8 @@ def run(rep="bubble_down"):
         raise ValueError
     variga.MAXIMISE = False
     variga.SUCCESS = success
-    variga.POPSIZE = 4000
-    variga.GENERATIONS = 50
+    variga.POPSIZE = 40
+    variga.GENERATIONS = 10
     variga.PMUT = 0.01
     variga.CROSSOVER_PROB = 0.7
     variga.ELITE = 1
@@ -352,8 +354,13 @@ def fitness_fn(fn):
 
 # srff = fitness.benchmarks()["pagie_2d"]
 srff = fitness.benchmarks()["vanneschi_bioavailability"]
+
+pdff = fitness.ProbabilityDistributionFitnessFunction(
+    [i*0.1 for i in range(10)], 10)
+
 # vars = ["x", "y"]
-vars = ["x" + str(i) for i in range(srff.arity)]
+# vars = ["x" + str(i) for i in range(srff.arity)]
+vars = ["RAND"] # see evaluate() above
 consts = ["0.1", "0.2", "0.3", "0.4", "0.5"]
 vars = vars + consts
 fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
@@ -372,9 +379,13 @@ if __name__ == "__main__":
     elif sys.argv[1] == "bubble_down_structure":
         study_structure(sys.argv[2], "bubble_down")
     elif sys.argv[1] == "run_bubble_down":
-        run("bubble_down")
+        run(srff, "bubble_down")
     elif sys.argv[1] == "run_grow":
-        run("grow")
+        run(srff, "grow")
+    elif sys.argv[1] == "run_bubble_down_prob":
+        run(pdff, "bubble_down")
+    elif sys.argv[1] == "run_grow_prob":
+        run(pdff, "grow")
     else:
         print("Usage: <test|structure>")
         print(sys.argv)

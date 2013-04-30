@@ -4,6 +4,7 @@ import sys
 import random
 import operator
 from itertools import product
+from scipy.stats import ks_2samp
 import numpy as np
 from numpy import add, subtract, multiply, divide, sin, cos, exp, log, power, square
 from numpy import logical_and, logical_or, logical_xor, logical_not
@@ -167,12 +168,34 @@ class BooleanProblemGeneral:
         return sum([p(s) for p in self.test_problems])
 
 
-class ProbabilityDistribution:
-    """Haven't tested this at all yet."""
-    def __init__(self, x):
-        from pymc import *
-        from scipy.stats import ks_2samp
+class ProbabilityDistributionFitnessFunction:
+    """Fitness function for running GP to create a model of an unknown
+    probability distribution. This problem is a bit like symbolic
+    regression, but not exactly. We start off with just a list of
+    numbers, which we assume are sampled from some unknown
+    distribution, and our goal is to find a function which matches
+    that distribution.
+
+    There are several ways we could go about this. For now, this
+    implements a fairly simple method: candidate functions can use a
+    RAND call to get random numbers. These are then tested using the
+    Kolmogorov-Smirnov 2-sample test against the known samples.
+
+    Probably the right way to do this is to parse fn to get a PyMC
+    model, then fit it, then see how well it does in either a PyMC
+    goodness of fit test, or just the ks_2samp as above.
+
+    Another option is to generate fn to take a single argument, which
+    is a number between 0 and 1, and regard fn as the generating
+    function of the distribution, ie the inverse of the cumulative
+    distribution function."""
+    
+    def __init__(self, x, n=100):
+        # from pymc import *
+        # samples from an unknown distribution to be matched
         self.x = x
+        # how many samples should we generate when testing candidates?
+        self.n = n
 
     def __call__(self, fn):
         if not callable(fn):
@@ -182,16 +205,17 @@ class ProbabilityDistribution:
             except MemoryError:
                 return default_fitness(self.maximise), None
 
-        fn_data = [fn() for i in range(100)]
-        # test against our data
-        return ks_2samp(self.x, fn_data)
+        fn_data = [fn(None) for i in range(self.n)]
+        # Test against our data. ks_2samp returns (D, p), where D is
+        # the KS statistic. if the KS statistic is small or the
+        # p-value is high, then we cannot reject the hypothesis that
+        # the distributions of the two samples are the same. In other
+        # words, smaller D means the distributions are more similar.
+        # So we're aiming to minimise D.
+        return ks_2samp(self.x, fn_data)[0]
+    def test(self, fn):
+        return self(fn) # FIXME do something more useful here
 
-    def unused_for_call(self, fn):
-        # the right way to do this is to parse fn to get a PyMC model,
-        # then fit it, then see how well it does in either a PyMC
-        # goodness of fit test, or just the ks_2samp as above.
-        pass
-    
     
 class SymbolicRegressionFitnessFunction:
     """Fitness function for symbolic regression problems. Yes, it's a
@@ -240,7 +264,6 @@ class SymbolicRegressionFitnessFunction:
         train_y = dy[:idx]
         test_X = dX[idx:].T
         test_y = dy[idx:]
-        print("shapes", train_X.shape, train_y.shape, test_X.shape, test_y.shape)
         return SymbolicRegressionFitnessFunction(train_X, train_y,
                                                  test_X, test_y, defn)
 
