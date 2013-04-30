@@ -16,16 +16,21 @@ class TSP:
     def __init__(self, filename):
         self.coords = {}
         self.read_file(filename)
-        self.read_optimal_results("TSPLIB/all_optimal.txt")
+        self.read_optimal_results("../data/TSPLIB/STSP.html")
 
     def read_optimal_results(self, filename):
+        import re
         optimal_results = {}
         for line in open(filename).readlines():
-            key, val = line.split(":")
-            key = key.strip()
-            # optimal results are given as integers in TSPLIB
-            val = int(val.split()[0].strip()) 
-            optimal_results[key] = val
+            p = r">(\w+) : (\d+)<"
+            m = re.search(p, line)
+            if m:
+                key, val = m.group(1, 2)
+                key = key.strip()
+                # optimal results are given as integers in TSPLIB
+                val = int(val.split()[0].strip()) 
+                optimal_results[key] = val
+        print("Optimal results:")
         print(optimal_results)
         self.optimal = optimal_results[self.name]
 
@@ -68,7 +73,7 @@ class TSP:
         return euclidean_distance(self.coords[x], self.coords[y])
 
 if __name__ == "__main__":
-    problem = TSP("TSPLIB/att48.tsp.gz")
+    problem = TSP("../data/TSPLIB/att48.tsp.gz")
     # tour = problem.perm(random)
     # print(tour)
     # print(problem.tour_length(tour))

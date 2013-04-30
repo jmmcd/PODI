@@ -1,4 +1,8 @@
+#!/usr/bin/env python
+
 import urllib2
+import gzip
+import os
 
 def pull_file(url):
     file_name = url.split('/')[-1]
@@ -26,10 +30,21 @@ def pull_file(url):
 def main():
     urls = ["http://personal.disco.unimib.it/Vanneschi/bioavailability.txt",
             "http://personal.disco.unimib.it/Vanneschi/bioavailability_lookup.txt",
-            "http://personal.disco.unimib.it/Vanneschi/toxicity.txt"]
+            "http://personal.disco.unimib.it/Vanneschi/toxicity.txt",
+            "http://www.iwr.uni-heidelberg.de/groups/comopt/software/TSPLIB95/tsp/ALL_tsp.tar.gz",
+            "http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/STSP.html"
+            # TODO download all the Hamiltonian cycle probems,
+            # capacitated arc-routing problems, etc from the same
+            # source as TSPLIB
+            ]
 
     for url in urls:
         pull_file(url)
+    os.makedirs("TSPLIB")
+    os.rename("ALL_tsp.tar.gz", "TSPLIB/ALL_tsp.tar.gz")
+    # TODO this should be platform-independent
+    os.system("cd TSPLIB; tar xzf ALL_tsp.tar.gz")
+    os.rename("STSP.html", "TSPLIB/STSP.html")
     
 if __name__ == '__main__':
     main()
