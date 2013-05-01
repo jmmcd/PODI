@@ -4,9 +4,7 @@ import sys, time, random
 import numpy as np
 import nonrandom
 from copy import deepcopy
-from variga import xover, Individual
-from variga import fitness_idx, used_idx, genome_idx, phenotype_idx, readable_phenotype_idx, semantics_idx
-
+from variga import xover, make_individual
 
 # note xover takes parent inds and returns genomes
 # onepoint_mutate takes a genome and modifies it (and returns it)
@@ -19,12 +17,12 @@ def generate_random_pairs(n):
     for i in range(n):
         LEN = random.randint(MINLEN, MAXLEN)
         g = [random.randint(0, MAXV-1) for i in range(LEN)]
-        gind = Individual(g)
-        if gind[phenotype_idx] is None:
+        gind = make_individual(g)
+        if gind.phenotype is None:
             continue
         h = [random.randint(0, MAXV-1) for i in range(LEN)]
-        hind = Individual(h)
-        if hind[phenotype_idx] is None:
+        hind = make_individual(h)
+        if hind.phenotype is None:
             continue
         yield (gind, hind)
     
@@ -32,12 +30,12 @@ def generate_mutation_pairs(n):
     for i in range(n):
         LEN = random.randint(MINLEN, MAXLEN)
         g = [random.randint(0, MAXV-1) for i in range(LEN)]
-        gind = Individual(g)
-        if gind[phenotype_idx] is None:
+        gind = make_individual(g)
+        if gind.phenotype is None:
             continue
         h = onepoint_mutate(g[:], min(gind[used_idx], len(g)))
-        hind = Individual(h)
-        if hind[phenotype_idx] is None:
+        hind = make_individual(h)
+        if hind.phenotype is None:
             continue
         yield (gind, hind)
 
@@ -45,35 +43,38 @@ def generate_crossover_pairs(n):
     for i in range(n):
         LEN = random.randint(MINLEN, MAXLEN)
         g = [random.randint(0, MAXV-1) for i in range(LEN)]
-        gind = Individual(g)
-        if gind[phenotype_idx] is None:
+        gind = make_individual(g)
+        if gind.phenotype is None:
             continue
         LEN = random.randint(MINLEN, MAXLEN)
         h = [random.randint(0, MAXV-1) for i in range(LEN)]
-        hind = Individual(h)
-        if hind[phenotype_idx] is None:
+        hind = make_individual(h)
+        if hind.phenotype is None:
             continue
         children = xover(gind, hind)
-        cind0 = Individual(children[0])
-        cind1 = Individual(children[1])
-        if cind0[phenotype_idx] is not None:
+        cind0 = make_individual(children[0])
+        cind1 = make_individual(children[1])
+        if cind0.phenotype is not None:
             yield (gind, cind0)
             yield (hind, cind0)
-        if cind1[phenotype_idx] is not None:
+        if cind1.phenotype is not None:
             yield (gind, cind1)
             yield (hind, cind1)
         
 
 def distances(g, h):
     # g and h are individuals
-    return (levenshtein(g[genome_idx], h[genome_idx]),
-            PHENOTYPE_DISTANCE(g[readable_phenotype_idx], h[readable_phenotype_idx]),
-            SEMANTIC_DISTANCE(g[semantics_idx], h[semantics_idx]),
-            abs(g[fitness_idx] - h[fitness_idx]))
+    return (levenshtein(g.genome, h.genome),
+            PHENOTYPE_DISTANCE(g.readable_phenotype, h.readable_phenotype),
+            SEMANTIC_DISTANCE(g.semantics, h.semantics),
+            abs(g.fitness - h.fitness))
 
 def levenshtein(a,b):
-    """Calculates the Levenshtein distance between a and b. Copied
-    from [http://hetland.org/coding/python/levenshtein.py]"""
+    """Calculates the Levenshtein distance between any two sequences a
+    and b. Copied from
+    [http://hetland.org/coding/python/levenshtein.py]. This is
+    necessary because the editdist module (used in fitness.py) only
+    works on strings."""
     n, m = len(a), len(b)
     if n > m:
         # Make sure n <= m, to use O(min(n,m)) space

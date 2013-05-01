@@ -4,10 +4,10 @@ import os
 import sys
 import random
 import collections
-import zss # git clone https://github.com/timtadh/zhang-shasha.git
+import zss # 
 from zss.test_tree import Node
 import numpy as np
-from numpy import add, subtract, multiply, divide, sin, cos, exp, log, power, square
+from numpy import add, subtract, multiply, divide, sin, cos, exp, log, power, square, sqrt
 np.seterr(all='raise')
 
 import structure
@@ -27,14 +27,10 @@ def evaluate(t, x):
         elif t == "x": return x[0]
         elif t == "y": return x[1]
         # special var generates a random var uniformly in [0, 1].
-        # FIXME this will be slow -- would rather generate a column of
-        # random numbers, allowing np broadcasting throughout
-        # evaluate(), but I don't know how to get the right length
-        # from within this function.
-        elif t == "RAND": return np.random.random()
+        elif t == "RAND": return np.random.random(len(x[0]))
         else:
             try:
-                return float(t)
+                return np.ones(len(x[0])) * float(t)
             except ValueError:
                 raise ValueError("Can't interpret " + t)
     else:
@@ -354,18 +350,24 @@ vars = ["x" + str(i) for i in range(srff.arity)]
 # consider allowing all the distributions here
 # [http://docs.scipy.org/doc/numpy/reference/routines.random.html] as
 # primitives in the pdff. For now, RAND just gives a uniform.
-vars = ["RAND"] # see evaluate() above
+# vars = ["RAND"] # see evaluate() above
 consts = ["0.1", "0.2", "0.3", "0.4", "0.5"]
 vars = vars + consts
 fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
 # fns = {"+": 2, "-": 2, "*": 2, "/": 2}
 
-# FIXME try adding the soft-if function from: Using Genetic
-# Programming for Multiclass Classification by Simultaneously Solving
-# Component Binary Classification Problems, Will Smart, Mengjie Zhang
+# SIF is the soft-if function from: Will Smart and Mengjie Zhang,
+# Using Genetic Programming for Multiclass Classification by
+# Simultaneously Solving Component Binary Classification Problems
+# http://www.mcs.vuw.ac.nz/comp/Publications/archive/CS-TR-05/CS-TR-05-1.pdf
+def SIF(x, y, z):
+    return (y/(1.0+e**(2*x)) + z/(1.0+e**(-2*x)))
 
-# FIXME try adding the no-exceptions division which featured in a
-# TransEC article recently.
+# AQ is the analytic quotient from: Ji Ni and Russ H. Drieberg and
+# Peter I. Rockett, "The Use of an Analytic Quotient Operator in
+# Genetic Programming", IEEE Transactions on Evolutionary Computation
+def AQ(x, y):
+    return x/sqrt(1.0+y*y)
 
 
 pTerminal = 0.2 # used in grow algorithm

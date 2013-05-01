@@ -12,7 +12,8 @@ np.seterr(all='raise')
 try:
     import editdist
 except:
-    # StringMatch won't be available. Try: $ pip install editdist
+    # StringMatch won't be available. See reqs.txt (TODO or could fall
+    # back to the levenshtein function in structure.py in this case.)
     pass
 
 
@@ -97,7 +98,7 @@ class StringMatch():
     """Fitness function for matching a string. Takes a string and
     returns fitness. Usage: StringMatch("golden") returns a *callable
     object*, ie the fitness function. Uses Levenshtein edit distance
-    provided by the editdist library: pip install editdist."""
+    provided by the editdist library: see reqs.txt."""
     maximise = False
     def __init__(self, target):
         self.target = target
@@ -235,7 +236,7 @@ class ProbabilityDistributionFitnessFunction:
             except MemoryError:
                 return default_fitness(self.maximise), None
 
-        fn_data = np.array([fn(None) for i in range(self.n)])
+        fn_data = fn(np.zeros((1, self.n)))
 
         # print("fn_data")
         # print(fn_data)

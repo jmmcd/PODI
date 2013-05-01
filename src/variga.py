@@ -4,6 +4,7 @@ import sys, time, random
 import numpy as np
 import nonrandom
 from copy import deepcopy
+from collections import namedtuple
 
 fitness_idx, used_idx, genome_idx, phenotype_idx, readable_phenotype_idx, semantics_idx = range(6)
     
@@ -16,11 +17,14 @@ fitness_idx, used_idx, genome_idx, phenotype_idx, readable_phenotype_idx, semant
 # MAXIMISE, else low fitness.
 def ind_compare(x):
     if MAXIMISE:
-        return x[fitness_idx]
+        return x.fitness
     else:
-        return -x[fitness_idx]
+        return -x.fitness
 
-def Individual(genome):
+Individual = namedtuple("Individual", ["genome", "used_codons", "fitness",
+                                       "phenotype", "readable_phenotype", "semantics"])
+
+def make_individual(genome):
     if genome is None:
         LEN = random.randint(MINLEN, MAXLEN)
         genome = [random.randint(0, MAXV-1) for i in range(LEN)]
@@ -37,14 +41,17 @@ def Individual(genome):
         else:
             fitness = float("inf")
     used = nr.used
-    return (fitness, used, genome, phenotype, readable_phenotype, semantics)
+    return Individual(fitness=fitness, used_codons=used, genome=genome,
+                      phenotype=phenotype,
+                      readable_phenotype=readable_phenotype,
+                      semantics=semantics)
 
 # Onepoint crossover FIXME change to twopoint?
 def xover(a, b):
-    g, h = a[genome_idx], b[genome_idx]
+    g, h = a.genome, b.genome
     if random.random() < CROSSOVER_PROB:
         # -1 to get last index in array; min() in case of wraps: used > len
-        max_g, max_h = min(len(g)-1, a[used_idx]), min(len(h)-1, b[used_idx])
+        max_g, max_h = min(len(g)-1, a.used_codons), min(len(h)-1, b.used_codons)
         pt_g, pt_h = random.randint(1, max_g), random.randint(1, max_h)
         c = g[:pt_g] + h[pt_h:]
         d = h[:pt_h] + g[pt_g:]
@@ -65,15 +72,15 @@ def mutate(g):
 # Print statistics, and return True if we have succeeded already.
 def stats(pop, gen):
     best = max(pop, key=ind_compare)
-    valids = [i for i in pop if i[phenotype_idx] is not None]
+    valids = [i for i in pop if i.phenotype is not None]
     ninvalids = len(pop) - len(valids)
     if len(valids) == 0:
         fitness_vals = np.array([0])
         used_vals = np.array([0])
     else:
-        fitness_vals = np.array([i[fitness_idx] for i in valids])
-        used_vals = np.array([i[used_idx] for i in valids])
-    len_vals = np.array([len(i[genome_idx]) for i in pop])
+        fitness_vals = np.array([i.fitness for i in valids])
+        used_vals = np.array([i.used_codons for i in valids])
+    len_vals = np.array([len(i.genome) for i in pop])
     meanfit = np.mean(fitness_vals)
     sdfit = np.std(fitness_vals)
     meanused = np.mean(used_vals)
@@ -89,12 +96,12 @@ def stats(pop, gen):
               "number_invalids best_phenotype")
     print("{0} {1} {2} {3} {4} {5:.2f} {6:.2f} {7:.2f} {8:.2f} {9:.2f} {10:.2f} {11} : {12}"
           .format(gen, POPSIZE * gen,
-                  best[fitness_idx], best[used_idx],
-                  FITNESS.test(best[phenotype_idx]),
+                  best.fitness, best.used_codons,
+                  FITNESS.test(best.phenotype),
                   meanfit, sdfit, meanused, sdused,
                   meanlen, sdlen, ninvalids, 
-                  best[readable_phenotype_idx]))
-    return SUCCESS(best[fitness_idx])
+                  best.readable_phenotype))
+    return SUCCESS(best.fitness)
 
 # Use many tournaments to get parents
 def tournament(items):
@@ -121,7 +128,7 @@ def step(pop):
         mutate(genome)
 
     # grow up: turn genomes into individuals
-    newpop = [Individual(g) for g in newpop]
+    newpop = [make_individual(g) for g in newpop]
     
     # elite: replace worst
     newpop.sort(key=ind_compare)
@@ -131,7 +138,7 @@ def step(pop):
 def main(seed=None):
     if seed is not None:
         random.seed(seed)
-    pop = [Individual(None) for i in range(POPSIZE)]
+    pop = [make_individual(None) for i in range(POPSIZE)]
     for gen in range(GENERATIONS):
         if stats(pop, gen):
             sys.exit()
