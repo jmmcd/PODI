@@ -59,9 +59,12 @@ class RandomFitness:
     def __call__(self, ind):
         """Allow objects of this type to be called as if they were
         functions. Return a random value as fitness."""
-        return random.random()
-    def test(self, candidate):
-        return self(candidate)
+        return self.get_semantics(ind)[0]
+    def test(self, ind):
+        return self(ind)
+    def get_semantics(self, ind):
+        x = random.random()
+        return (x, x)
 
 class SizeFitness:
     """Useful for investigating control of tree size. Return the
@@ -69,21 +72,26 @@ class SizeFitness:
     maximise = False
     def __init__(self, target_size=20):
         self.target_size = target_size
-
     def __call__(self, ind):
         """Allow objects of this type to be called as if they were
         functions."""
-        return abs(self.target_size - len(ind))
-    def test(self, candidate):
-        return self(candidate)
+        return self.get_semantics(ind)[0]
+    def test(self, ind):
+        return self(ind)
+    def get_semantics(self, ind):
+        ln = len(ind)
+        return abs(self.target_size - ln), ln
 
 class MaxFitness():
     """Arithmetic maximisation with python evaluation."""
     maximise = True
-    def __call__(self, candidate):
-        return eval_or_exec(candidate)
-    def test(self, candidate):
-        return self(candidate)
+    def __call__(self, ind):
+        return self.get_semantics(ind)[0]
+    def test(self, ind):
+        return self(ind)
+    def get_semantics(self, ind):
+        x = eval_or_exec(ind)
+        return (x, x)
 
 class StringMatch():
     """Fitness function for matching a string. Takes a string and
@@ -93,10 +101,12 @@ class StringMatch():
     maximise = False
     def __init__(self, target):
         self.target = target
-    def __call__(self, guess):
-        return editdist.distance(self.target, guess)
-    def test(self, candidate):
-        return self(candidate)
+    def __call__(self, ind):
+        return self.get_semantics(ind)[0]
+    def test(self, ind):
+        return self(ind)
+    def get_semantics(self, ind):
+        return editdist.distance(self.target, ind), ind
 
 class StringProc():
     """Fitness function for programs that process strings, ie they
@@ -105,13 +115,18 @@ class StringProc():
     def __init__(self, test_cases):
         self.test_cases = test_cases
     def __call__(self, p):
+        return self.get_semantics(p)[0]
+    def test(self, ind):
+        # TODO should allow for a proper train/test suite
+        return self(ind)
+    def get_semantics(self, ind):
+        semantics = []
         fitness = 0
         for input, output in self.test_cases:
-            fitness += editdist(output, p(input))
-        return fitness
-    def test(self, candidate):
-        # TODO should allow for a proper train/test suite
-        return self(candidate)
+            result = p(input)
+            semantics.append(result)
+            fitness += editdist(result, output)
+        return fitness, semantics
 
 class BooleanProblem:
     """Boolean problem of size n. Pass target function in.
@@ -140,15 +155,19 @@ class BooleanProblem:
             self.target_cases = np.array(target)
 
     def __call__(self, s):
+        return self.get_semantics(s)[0]
+    
+    def test(self, ind):
+        # TODO should allow for a proper train/test suite
+        return self(ind)
+
+    def get_semantics(self, ind):
         # s is a string which evals to a fn.
         fn = eval(s)
         output = fn(self.x)
         non_matches = output ^ self.target_cases
-        return sum(non_matches) # Fitness is number of errors
-    
-    def test(self, candidate):
-        # TODO should allow for a proper train/test suite
-        return self(candidate)
+        return output, sum(non_matches) # Fitness is number of errors
+
 
 class BooleanProblemGeneral:
     """A compound problem. It consists of a single Boolean problem, at
@@ -163,9 +182,15 @@ class BooleanProblemGeneral:
         self.test_problems = [
             BooleanProblem(n, target) for n in test_ns]
     def __call__(self, s):
-        return sum([p(s) for p in self.train_problems])
+        return self.get_semantics(s)[0]
     def test(self, s):
         return sum([p(s) for p in self.test_problems])
+    def get_semantics(self, s):
+        semantics = [p.get_semantics(s) for p in self.train_problems]
+        # sum(semantics_i[0]) is the sum of fitness values
+        # [semantics_i[1]] is a list of numpy arrays.
+        return (sum(semantics_i[0] for semantics_i in semantics),
+                [semantics_i[1] for semantics_i in semantics])
 
 
 class ProbabilityDistributionFitnessFunction:
@@ -178,8 +203,9 @@ class ProbabilityDistributionFitnessFunction:
 
     There are several ways we could go about this. For now, this
     implements a fairly simple method: candidate functions can use a
-    RAND call to get random numbers. These are then tested using the
-    Kolmogorov-Smirnov 2-sample test against the known samples.
+    RAND call to get random numbers. The outputs of the function are
+    then tested using the Kolmogorov-Smirnov 2-sample test against the
+    known samples.
 
     Probably the right way to do this is to parse fn to get a PyMC
     model, then fit it, then see how well it does in either a PyMC
@@ -198,6 +224,10 @@ class ProbabilityDistributionFitnessFunction:
         self.n = n
 
     def __call__(self, fn):
+        return self.get_semantics(fn)[0]
+    def test(self, fn):
+        return self(fn) # FIXME do something more useful here
+    def get_semantics(self, fn):
         if not callable(fn):
             # assume fn is a string which evals to a function.
             try:
@@ -205,17 +235,18 @@ class ProbabilityDistributionFitnessFunction:
             except MemoryError:
                 return default_fitness(self.maximise), None
 
-        fn_data = [fn(None) for i in range(self.n)]
+        fn_data = np.array([fn(None) for i in range(self.n)])
+
+        # print("fn_data")
+        # print(fn_data)
         # Test against our data. ks_2samp returns (D, p), where D is
         # the KS statistic. if the KS statistic is small or the
         # p-value is high, then we cannot reject the hypothesis that
         # the distributions of the two samples are the same. In other
         # words, smaller D means the distributions are more similar.
         # So we're aiming to minimise D.
-        return ks_2samp(self.x, fn_data)[0]
-    def test(self, fn):
-        return self(fn) # FIXME do something more useful here
-
+        return ks_2samp(self.x, fn_data)[0], fn_data
+        
     
 class SymbolicRegressionFitnessFunction:
     """Fitness function for symbolic regression problems. Yes, it's a

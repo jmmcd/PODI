@@ -5,7 +5,7 @@ import numpy as np
 import nonrandom
 from copy import deepcopy
 
-fitness_idx, used_idx, genome_idx, phenotype_idx = range(4)
+fitness_idx, used_idx, genome_idx, phenotype_idx, readable_phenotype_idx, semantics_idx = range(6)
     
 # If you try to compare individuals directly, using tuple comparison,
 # you can get in trouble when the genomes have different lengths and
@@ -26,16 +26,18 @@ def Individual(genome):
         genome = [random.randint(0, MAXV-1) for i in range(LEN)]
     nr = nonrandom.NonRandom(genome, maxval=MAXV, wraps=WRAPS)
     try:
-        phenotype = GENERATE(nr)
-        fitness = FITNESS(phenotype)
+        readable_phenotype, phenotype = GENERATE(nr)
+        fitness, semantics = FITNESS.get_semantics(phenotype)
     except StopIteration:
         phenotype = None
+        readable_phenotype = None
+        semantics = None
         if MAXIMISE:
             fitness = -float("inf")
         else:
             fitness = float("inf")
     used = nr.used
-    return (fitness, used, genome, phenotype)
+    return (fitness, used, genome, phenotype, readable_phenotype, semantics)
 
 # Onepoint crossover FIXME change to twopoint?
 def xover(a, b):
@@ -91,7 +93,7 @@ def stats(pop, gen):
                   FITNESS.test(best[phenotype_idx]),
                   meanfit, sdfit, meanused, sdused,
                   meanlen, sdlen, ninvalids, 
-                  best[phenotype_idx]))
+                  best[readable_phenotype_idx]))
     return SUCCESS(best[fitness_idx])
 
 # Use many tournaments to get parents
@@ -151,13 +153,19 @@ WRAPS = 0
 
 # problem-specific
 def generate(random):
-    return [random.randint(0, 10) for i in range(10)]
-def fitness(x):
-    return sum(x)
+    x = [random.randint(0, 10) for i in range(10)]
+    return (x, x)
+class fitness:
+    def __call__(self, x):
+        return self.get_semantics(x)[0]
+    def test(self, x):
+        return self(x)
+    def get_semantics(self, x):
+        return sum(x), x
 def success(x):
     return x > 90
 GENERATE = generate
-FITNESS = fitness
+FITNESS = fitness()
 SUCCESS = success
 MAXIMISE = True
 

@@ -4,7 +4,7 @@ import os
 import sys
 import random
 import collections
-import zss
+import zss # git clone https://github.com/timtadh/zhang-shasha.git
 from zss.test_tree import Node
 import numpy as np
 from numpy import add, subtract, multiply, divide, sin, cos, exp, log, power, square
@@ -26,8 +26,12 @@ def evaluate(t, x):
             return x[idx] 
         elif t == "x": return x[0]
         elif t == "y": return x[1]
-        # special var generates a random number uniformly in [0, 1]
-        elif t == "RAND": return random.random()
+        # special var generates a random var uniformly in [0, 1].
+        # FIXME this will be slow -- would rather generate a column of
+        # random numbers, allowing np broadcasting throughout
+        # evaluate(), but I don't know how to get the right length
+        # from within this function.
+        elif t == "RAND": return np.random.random()
         else:
             try:
                 return float(t)
@@ -222,18 +226,9 @@ def generate_bubble_down_tree_and_fn(rng):
     t, d, n = bubble_down(30, rng)
     return t, make_fn(t)
 
-generate_bubble_down_fn = (
-    lambda rng: generate_bubble_down_tree_and_fn(rng)[1])
-
-generate_bubble_down_fn_minn_maxn = (
-    lambda minn, maxn, rng:
-        generate_bubble_down_tree_and_fn_minn_maxn(minn, maxn, rng)[1])
-
 def generate_grow_tree_and_fn(rng):
     t = grow(6, rng)
     return t, make_fn(t)
-
-generate_grow_fn = lambda rng: generate_grow_tree_and_fn(rng)[1]
 
 def success(err):
     return False # let's just keep running so all runs are same length
@@ -245,7 +240,7 @@ def study_structure(basename, rep="bubble_down"):
     structure.MAXLEN = 100
     structure.SEMANTIC_DISTANCE = semantic_distance
     structure.PHENOTYPE_DISTANCE = tree_distance
-    structure.FITNESS = semantics
+    structure.FITNESS = srff
     structure.CROSSOVER_PROB = 1.0
     structure.MAXV = sys.maxint
     structure.WRAPS = 0
@@ -330,9 +325,9 @@ def run(fitness_fn, rep="bubble_down"):
     variga.PHENOTYPE_DISTANCE = tree_distance
     variga.FITNESS = fitness_fn
     if rep == "bubble_down":
-        variga.GENERATE = generate_bubble_down_fn
+        variga.GENERATE = generate_bubble_down_tree_and_fn
     elif rep == "grow":
-        variga.GENERATE = generate_grow_fn
+        variga.GENERATE = generate_grow_tree_and_fn
     else:
         raise ValueError
     variga.MAXIMISE = False
@@ -346,25 +341,32 @@ def run(fitness_fn, rep="bubble_down"):
     variga.WRAPS = 1
     variga.main()
 
-def semantics(fn):
-    return srff.get_semantics(fn)
-
-def fitness_fn(fn):
-    return srff(fn)
-
 # srff = fitness.benchmarks()["pagie_2d"]
 srff = fitness.benchmarks()["vanneschi_bioavailability"]
 
+pdff_n_samples = 10
 pdff = fitness.ProbabilityDistributionFitnessFunction(
-    [i*0.1 for i in range(10)], 10)
+    np.linspace(0.0, 1.0, pdff_n_samples), pdff_n_samples)
 
 # vars = ["x", "y"]
-# vars = ["x" + str(i) for i in range(srff.arity)]
+vars = ["x" + str(i) for i in range(srff.arity)]
+
+# consider allowing all the distributions here
+# [http://docs.scipy.org/doc/numpy/reference/routines.random.html] as
+# primitives in the pdff. For now, RAND just gives a uniform.
 vars = ["RAND"] # see evaluate() above
 consts = ["0.1", "0.2", "0.3", "0.4", "0.5"]
 vars = vars + consts
 fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
 # fns = {"+": 2, "-": 2, "*": 2, "/": 2}
+
+# FIXME try adding the soft-if function from: Using Genetic
+# Programming for Multiclass Classification by Simultaneously Solving
+# Component Binary Classification Problems, Will Smart, Mengjie Zhang
+
+# FIXME try adding the no-exceptions division which featured in a
+# TransEC article recently.
+
 
 pTerminal = 0.2 # used in grow algorithm
 
