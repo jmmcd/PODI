@@ -85,7 +85,7 @@ def stats(pop, gen):
               "mean_used_codons stddev_used_codons " +
               "mean_genome_length stddev_genome_length " +
               "number_invalids best_phenotype")
-    print("{0} {1} {2} {3} {4:.2f} {5:.2f} {6:.2f} {7:.2f} {8:.2f} {9:.2f} {10} : {11}"
+    print("{0} {1} {2} {3} {4} {5:.2f} {6:.2f} {7:.2f} {8:.2f} {9:.2f} {10:.2f} {11} : {12}"
           .format(gen, POPSIZE * gen,
                   best[fitness_idx], best[used_idx],
                   FITNESS.test(best[phenotype_idx]),
