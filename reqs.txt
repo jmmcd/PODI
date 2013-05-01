@@ -1,14 +1,15 @@
 # I don't know how requirements files work. Does PODI have to be a pip
 # package to make this work? Anyway, the following are some commands
-# to get a few needed libraries
+# to get a few needed libraries.
 
-Need numpy, scipy, sklearn, matplotlib, pylab
-
-Can get all of these from Anaconda
+Can get all of these from Anaconda: numpy, scipy, sklearn, matplotlib,
+pylab
 
 Tree-edit distance:
 git clone https://github.com/timtadh/zhang-shasha.git
 
 Levenshtein distance:
-pip install editdist
+hg clone https://code.google.com/p/py-editdist/
+
+(pip install editdist used to work, not anymore?)
 
