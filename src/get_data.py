@@ -47,4 +47,6 @@ def main():
     os.rename("STSP.html", "TSPLIB/STSP.html")
     
 if __name__ == '__main__':
+    os.makedirs("../data")
+    os.chdir("../data")
     main()
