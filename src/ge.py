@@ -69,8 +69,7 @@ def traverse(t, path=None):
             for s in traverse(item, path + (i,)):
                 yield s
 
-# grammar = Grammar("grammars/symbolic_regression_2d.bnf")
-grammar = Grammar("grammars/sr_2d_ne_test.bnf")
+grammar = Grammar("grammars/symbolic_regression_2d.bnf")
 srff = fitness.benchmarks()["pagie_2d"]
 MAX_CODON = 127
 def generate(random):
