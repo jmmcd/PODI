@@ -349,7 +349,11 @@ vars = ["x" + str(i) for i in range(srff.arity)]
 
 # consider allowing all the distributions here
 # [http://docs.scipy.org/doc/numpy/reference/routines.random.html] as
-# primitives in the pdff. For now, RAND just gives a uniform.
+# primitives in the pdff. Consider at least normal, Poisson, beta,
+# uniform, exponential, lognormal, weibull.
+
+# For now, RAND just gives a uniform.
+
 # vars = ["RAND"] # see evaluate() above
 consts = ["0.1", "0.2", "0.3", "0.4", "0.5"]
 vars = vars + consts
