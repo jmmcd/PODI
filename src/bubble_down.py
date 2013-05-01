@@ -4,11 +4,13 @@ import os
 import sys
 import random
 import collections
-import zss # 
+# import cPickle
+
+import zss
 from zss.test_tree import Node
 import numpy as np
 from numpy import add, subtract, multiply, divide, sin, cos, exp, log, power, square, sqrt
-np.seterr(all='raise')
+np.seterr(all='raise', under='ignore')
 
 import structure
 import fitness
@@ -18,7 +20,39 @@ import variga
 # import nonrandom
 # random = nonrandom.NonRandom([999999999, 0, 17] * 100)
 
-def evaluate(t, x):
+class MemoizeMutable:
+    """Want to memoize the _evaluate function below. Because the tree
+    t is made of lists, ie is mutable, it can't be hashed, so the
+    usual memoization methods don't work. Instead, this class works.
+    It comes from Martelli's Cookbook [see
+    http://stackoverflow.com/questions/4669391/python-anyone-have-a-memoizing-decorator-that-can-handle-unhashable-arguments].
+    It uses cPickle to make a string, which is hashable. However, that
+    processing is slow, and it turns out to more than offset the
+    savings (even for a fairly large run).
+
+    Therefore one alternative is to try again to use tuples to
+    represent trees. However, numpy arrays are still unhashable. There
+    are also workarounds for that. But it's not clear so far that
+    memoisation will actually speed things up. Need to profile more
+    also."""
+    def __init__(self, fn):
+        self.fn = fn
+        self.memo = {}
+    def __call__(self, *args, **kwds):
+        s = cPickle.dumps(args, 1)+cPickle.dumps(kwds, 1)
+
+        # An alternative idea, a problem-specific hack
+        # s = str(args[0]) + args[1].tostring()
+        
+        if not self.memo.has_key(s): 
+            print "miss"  # DEBUG INFO
+            self.memo[s] = self.fn(*args, **kwds)
+        else:
+            print "hit"  # DEBUG INFO
+
+        return self.memo[s]
+
+def _evaluate(t, x):
     if type(t) == type(""):
         # it's a single string
         if t[0] == "x":
@@ -46,8 +80,13 @@ def evaluate(t, x):
         elif t[0] == "sin": return sin(evaluate(t[1], x))
         elif t[0] == "cos": return cos(evaluate(t[1], x))
         elif t[0] == "square": return square(evaluate(t[1], x))
+        elif t[0] == "AQ": return AQ(evaluate(t[1], x), evaluate(t[2], x))
+        elif t[0] == "SIF": return SIF(evaluate(t[1], x), evaluate(t[2], x), evaluate(t[3], x))
         else:
             raise ValueError("Can't interpret " + t[0])
+
+# evaluate = MemoizeMutable(_evaluate)
+evaluate = _evaluate
 
 def make_fn(t):
     return lambda x: evaluate(t, x)
@@ -328,8 +367,8 @@ def run(fitness_fn, rep="bubble_down"):
         raise ValueError
     variga.MAXIMISE = False
     variga.SUCCESS = success
-    variga.POPSIZE = 40
-    variga.GENERATIONS = 10
+    variga.POPSIZE = 500
+    variga.GENERATIONS = 100
     variga.PMUT = 0.01
     variga.CROSSOVER_PROB = 0.7
     variga.ELITE = 1
@@ -340,7 +379,7 @@ def run(fitness_fn, rep="bubble_down"):
 # srff = fitness.benchmarks()["pagie_2d"]
 srff = fitness.benchmarks()["vanneschi_bioavailability"]
 
-pdff_n_samples = 10
+pdff_n_samples = 100
 pdff = fitness.ProbabilityDistributionFitnessFunction(
     np.linspace(0.0, 1.0, pdff_n_samples), pdff_n_samples)
 
@@ -354,7 +393,7 @@ vars = ["x" + str(i) for i in range(srff.arity)]
 
 # For now, RAND just gives a uniform.
 
-# vars = ["RAND"] # see evaluate() above
+vars = ["RAND"] # see evaluate() above
 consts = ["0.1", "0.2", "0.3", "0.4", "0.5"]
 vars = vars + consts
 fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}

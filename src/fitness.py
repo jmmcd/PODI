@@ -8,7 +8,7 @@ from scipy.stats import ks_2samp
 import numpy as np
 from numpy import add, subtract, multiply, divide, sin, cos, exp, log, power, square
 from numpy import logical_and, logical_or, logical_xor, logical_not
-np.seterr(all='raise')
+np.seterr(all='raise', under='ignore')
 try:
     import editdist
 except:
