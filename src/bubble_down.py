@@ -127,7 +127,18 @@ def mknd(rng):
     """Make a node, consisting of a label, weights, and a bias
     term."""
     lbl = rng.choice(fns.keys())
-    wts = sorted([rng.random() for i in range(fns[lbl] - 1)])
+    arity = fns[lbl]
+
+    # Slight optimisation: the real code is this:
+    # wts = sorted([rng.random() for i in range(arity - 1)])
+
+    # But we avoid the loop/sort idiom in the common cases:
+    if arity in (0, 1):
+        wts = []
+    elif arity == 2:
+        wts = [rng.random()]
+    else:
+        wts = sorted([rng.random() for i in range(arity - 1)])
     bias = rng.random()
     return (lbl, wts, bias)
 
@@ -171,7 +182,10 @@ def bubble_down(n, rng):
 
     The algorithm is probably O(n logn) or so, since each node must be
     filtered down to at most the maximum depth of the tree, which is
-    roughly log n."""
+    roughly log n.
+
+    FIXME this function takes up about 1/2 the runtime, try for an
+    optimisation."""
 
     if n <= 1:
         return [rng.choice(vars)]
@@ -367,8 +381,8 @@ def run(fitness_fn, rep="bubble_down"):
         raise ValueError
     variga.MAXIMISE = False
     variga.SUCCESS = success
-    variga.POPSIZE = 500
-    variga.GENERATIONS = 100
+    variga.POPSIZE = 1000
+    variga.GENERATIONS = 10
     variga.PMUT = 0.01
     variga.CROSSOVER_PROB = 0.7
     variga.ELITE = 1
@@ -392,8 +406,8 @@ vars = ["x" + str(i) for i in range(srff.arity)]
 # uniform, exponential, lognormal, weibull.
 
 # For now, RAND just gives a uniform.
+# vars = ["RAND"] # see evaluate() above
 
-vars = ["RAND"] # see evaluate() above
 consts = ["0.1", "0.2", "0.3", "0.4", "0.5"]
 vars = vars + consts
 fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}

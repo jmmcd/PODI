@@ -275,7 +275,7 @@ class SymbolicRegressionFitnessFunction:
             self.defn = self.hits_fitness
         else:
             raise ValueError("Bad value for fitness definition: " + defn)
-
+        self.memo = {}
 
     @classmethod
     def init_from_data_file(cls, filename, split=0.9,
@@ -349,27 +349,40 @@ class SymbolicRegressionFitnessFunction:
         Return (default_fitness, None) on error. Pass test=True to run
         the function over the testing set instead. TODO try
         memoizing."""
+
+        # ad-hoc memoizing
+        # s = str(fn.func_closure[0].cell_contents)
+        # if self.memo.has_key((s, test)):
+            # print("hit")
+            # return self.memo[s, test]
+        # print("miss")
+        
+        # print("s:", s)
         if not callable(fn):
             # assume fn is a string which evals to a function.
             try:
                 fn = eval(fn)
             except MemoryError:
                 return default_fitness(self.maximise), None
+                # self.memo[s, test] = default_fitness(self.maximise), None
+                # return self.memo[s, test] 
+            
         try:
             if not test:
-                assert(self.train_y is not None)
                 vals_at_cases = fn(self.train_X)
-                assert(vals_at_cases is not None)
                 fit = self.defn(self.train_y, vals_at_cases)
-                return fit, vals_at_cases
             else:
-                assert(self.test_y is not None)
                 vals_at_cases = fn(self.test_X)
-                assert(vals_at_cases is not None)
                 fit = self.defn(self.test_y, vals_at_cases)
-                return fit, vals_at_cases
+
+            return fit, vals_at_cases
+            # self.memo[s, test] = fit, vals_at_cases
+            # return self.memo[s, test] 
+
         except FloatingPointError as fpe:
             return default_fitness(self.maximise), None
+            # self.memo[s, test] = default_fitness(self.maximise), None
+            # return self.memo[s, test] 
         except ValueError as ve:
             print("ValueError: " + str(ve) +':' + str(fn))
             raise
