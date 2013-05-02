@@ -70,6 +70,7 @@ def semantic_geometric_mutate(t, ms=0.01):
 def hillclimb(fitness_fn, n_evals=2000, popsize=100):
     """Hill-climbing optimisation. """
 
+    print("# generation evaluations best_fitness best_test_fitness best_phenotype")
     # Generate an initial solution
     t = grow(2, random)
     # Get its fitness value (ignore its semantics, even though they
@@ -94,7 +95,8 @@ def hillclimb(fitness_fn, n_evals=2000, popsize=100):
         # evaluated, even though there is no population in this
         # hillclimbing algorithm.
         if i % popsize == popsize - 1: 
-            print("%d %f %f %s" % (i, ft, fitness_fn.test(fnt), str(t)))
+            print("%d %d %f %f : %s" % (i % popsize, i,
+                                        ft, fitness_fn.test(fnt), str(t)))
         
 if __name__ == "__main__":
     # srff is a symbolic regression problem imported from fitness.py
