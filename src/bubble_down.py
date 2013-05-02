@@ -67,6 +67,8 @@ def _evaluate(t, x):
                 return np.ones(len(x[0])) * float(t)
             except ValueError:
                 raise ValueError("Can't interpret " + t)
+    elif type(t) in (int, float):
+        return np.ones(len(x[0])) * t
     else:
         # it's a list: take t[0] and decide what to do
         if   t[0] == "+": return add(evaluate(t[1], x), evaluate(t[2], x))
@@ -409,8 +411,8 @@ vars = ["x" + str(i) for i in range(srff.arity)]
 
 consts = ["0.1", "0.2", "0.3", "0.4", "0.5"]
 vars = vars + consts
-fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
-# fns = {"+": 2, "-": 2, "*": 2, "/": 2}
+# fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
+fns = {"+": 2, "-": 2, "*": 2, "/": 2}
 
 # SIF is the soft-if function from: Will Smart and Mengjie Zhang,
 # Using Genetic Programming for Multiclass Classification by

@@ -351,10 +351,10 @@ class SymbolicRegressionFitnessFunction:
         memoizing."""
 
         # ad-hoc memoizing
-        # s = str(fn.func_closure[0].cell_contents)
-        # if self.memo.has_key((s, test)):
+        s = str(fn.func_closure[0].cell_contents)
+        if self.memo.has_key((s, test)):
             # print("hit")
-            # return self.memo[s, test]
+            return self.memo[s, test]
         # print("miss")
         
         # print("s:", s)
@@ -363,9 +363,9 @@ class SymbolicRegressionFitnessFunction:
             try:
                 fn = eval(fn)
             except MemoryError:
-                return default_fitness(self.maximise), None
-                # self.memo[s, test] = default_fitness(self.maximise), None
-                # return self.memo[s, test] 
+                # return default_fitness(self.maximise), None
+                self.memo[s, test] = default_fitness(self.maximise), None
+                return self.memo[s, test] 
             
         try:
             if not test:
@@ -375,14 +375,14 @@ class SymbolicRegressionFitnessFunction:
                 vals_at_cases = fn(self.test_X)
                 fit = self.defn(self.test_y, vals_at_cases)
 
-            return fit, vals_at_cases
-            # self.memo[s, test] = fit, vals_at_cases
-            # return self.memo[s, test] 
+            # return fit, vals_at_cases
+            self.memo[s, test] = fit, vals_at_cases
+            return self.memo[s, test] 
 
         except FloatingPointError as fpe:
-            return default_fitness(self.maximise), None
-            # self.memo[s, test] = default_fitness(self.maximise), None
-            # return self.memo[s, test] 
+            # return default_fitness(self.maximise), None
+            self.memo[s, test] = default_fitness(self.maximise), None
+            return self.memo[s, test] 
         except ValueError as ve:
             print("ValueError: " + str(ve) +':' + str(fn))
             raise
