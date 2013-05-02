@@ -409,7 +409,7 @@ vars = ["x" + str(i) for i in range(srff.arity)]
 # For now, RAND just gives a uniform.
 # vars = ["RAND"] # see evaluate() above
 
-consts = ["0.1", "0.2", "0.3", "0.4", "0.5"]
+consts = [0.1, 0.2, 0.3, 0.4, 0.5]
 vars = vars + consts
 # fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
 fns = {"+": 2, "-": 2, "*": 2, "/": 2}
