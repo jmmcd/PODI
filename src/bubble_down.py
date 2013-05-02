@@ -53,7 +53,7 @@ class MemoizeMutable:
         return self.memo[s]
 
 def _evaluate(t, x):
-    if type(t) == type(""):
+    if type(t) == str:
         # it's a single string
         if t[0] == "x":
             idx = int(t[1:])
@@ -154,8 +154,7 @@ def choose_child(weights, val):
     for i, wt in enumerate(weights):
         if val < wt:
             return i
-        return len(weights)
-    return 0 # because weights is of len 0
+    return len(weights)
 
 def bubble_down_minn_maxn(minn, maxn, rng):
     """Generate a tree whose node-count is between the bounds minn and
