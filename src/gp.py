@@ -24,8 +24,9 @@ mutation_prob = 0.01
 
 def mutate(t, p=mutation_prob):
     """Point mutation of a tree. Traverse the tree. For each node,
-    with low probability, replace it with another node of same
-    arity."""
+    with low probability, replace it with another node of same arity.
+    FIXME would be easy to use grow and place_subtree_at_path to get
+    subtree mutation."""
     # FIXME this deepcopy is probably necessary, but will probably be
     # slow
     t = copy.deepcopy(t)
@@ -48,9 +49,7 @@ def mutate(t, p=mutation_prob):
                 options = [term for term in vars if term != nd]
                 if options:
                     # s will be the subtree rooted at parent
-                    s = get_subtree(t, path[:-1])
-                    # s[path[-1]] tells which child it is
-                    s[path[-1]] = random.choice(options)
+                    place_subtree_at_path(t, path, random.choice(options))
     return t
             
             

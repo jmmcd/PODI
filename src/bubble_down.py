@@ -106,6 +106,11 @@ def traverse(t, path=None):
             for s in traverse(item, path + (i,)):
                 yield s
 
+def place_subtree_at_path(t, path, st):
+    """Place subtree st into tree t at the given path."""
+    accessor = get_subtree(t, path[:-1]) # don't use element -1...
+    accessor[path[-1]] = st # ...because it's the final index
+
 def get_node(t, path):
     """Given a tree and a path, return the node at that path."""
     s = get_subtree(t, path)
@@ -212,8 +217,7 @@ def bubble_down(n, rng):
             assert(child_idx is not None)
             current = current[1+child_idx] # +1 because subtree root is at 0
             path = path + (1+child_idx,) # +1 again
-        accessor = get_subtree(t, path[:-1]) # don't use element -1...
-        accessor[path[-1]] = st # ...because it's the final index
+        place_subtree_at_path(t, path, st)
         d = depth(path)
         if d > max_depth:
             max_depth = d
