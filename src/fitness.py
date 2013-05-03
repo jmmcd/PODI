@@ -455,6 +455,8 @@ class SymbolicRegressionFitnessFunction:
         Thanks to David White for an original Java implementation of this
         code, and comments.
 
+        FIXME this should be doable using numpy meshgrid methods.
+
         @param minv A list of minimum values for the n variables.
         @param maxv A list of maximum values for the n variables.
         @param increment A list of increments for the n variables.
@@ -536,6 +538,10 @@ def benchmarks(key):
     elif key == "vanneschi_bioavailability":
         return SymbolicRegressionFitnessFunction.init_from_data_file(
             "../data/bioavailability.txt", split=0.7, randomise=True)
+
+    elif key == "dow_chemical_tower":
+        return SymbolicRegressionFitnessFunction.init_from_data_file(
+            "../data/towerData.txt", split=0.7, randomise=True)
 
     else:
         return "Unknown benchmark problem " + key
