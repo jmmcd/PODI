@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+# This module is for doing standard GP stuff. There are standard
+# operators and the semantic geometric mutation. They make random
+# choices, just like standard GP, and they don't use an NRNG to do so.
+# However, PODI also uses some functions from here.
+
 import os
 import sys
 import random
@@ -22,14 +27,38 @@ from bubble_down import vars, fns
 
 mutation_prob = 0.01
 
-def iter_len(iter):
-    return sum(1 for _ in iter)
+def iter_len(iter, filter=lambda x: True):
+    return sum(1 for x in iter if filter(x))
+
+def crossover(t1, t2):
+    t1 = copy.deepcopy(t1)
+    t2 = copy.deepcopy(t2)
+
+    # Choose crossover points s1, s2 -- don't crossover at root
+    n1 = iter_len(traverse(t1))
+    s1 = random.randint(1, n1-1) 
+    i1 = 0
+    n2 = iter_len(traverse(t2))
+    s2 = random.randint(1, n2-1)
+    i2 = 0
+    # Find crossover points
+    for nd1, st1, path1 in traverse(t1):
+        if i1 == s1:
+            for nd2, st2, path2 in traverse(t2):
+                if i2 == s2:
+                    place_subtree_at_path(t1, path1, st2)
+                    place_subtree_at_path(t2, path2, st1)
+                    break
+                i2 += 1
+            break
+        i1 += 1
+    return t1, t2
 
 def subtree_mutate(t):
     # FIXME this deepcopy is probably necessary, but will probably be
     # slow
     t = copy.deepcopy(t)
-    
+     
     n = iter_len(traverse(t))
     s = random.randint(1, n-1) # don't mutate at root
     i = 0
@@ -69,7 +98,6 @@ def point_mutate(t, p=mutation_prob):
                 arity = 0
                 options = [term for term in vars if term != nd]
                 if options:
-                    # s will be the subtree rooted at parent
                     place_subtree_at_path(t, path, random.choice(options))
     return t
             

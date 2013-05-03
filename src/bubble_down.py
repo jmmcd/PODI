@@ -111,9 +111,16 @@ def traverse(t, path=None):
                 yield s
 
 def place_subtree_at_path(t, path, st):
-    """Place subtree st into tree t at the given path."""
-    accessor = get_subtree(t, path[:-1]) # don't use element -1...
-    accessor[path[-1]] = st # ...because it's the final index
+    """Place subtree st into tree t at the given path. Cannot
+    correctly place a single node at the root of t."""
+    if (path == (0,) and isatom(st)):
+        raise ValueError("Cannot place a single node at the root")
+    if path[-1] == 0:
+        # Trying to overwrite a subtree rooted at the node given by
+        # path: We have to go back up one
+        path = path[:-1]
+    ptr = get_subtree(t, path[:-1])
+    ptr[path[-1]] = st # ...because it's the final index
 
 def get_node(t, path):
     """Given a tree and a path, return the node at that path."""
