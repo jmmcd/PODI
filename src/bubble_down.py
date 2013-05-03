@@ -4,7 +4,6 @@ import os
 import sys
 import random
 import collections
-# import cPickle
 
 import zss
 from zss.test_tree import Node
@@ -15,148 +14,15 @@ np.seterr(all='raise', under='ignore')
 import structure
 import fitness
 import variga
+import gp
 
 # uncomment these lines in order to get deterministic tree generation
 # import nonrandom
 # random = nonrandom.NonRandom([999999999, 0, 17] * 100)
 
-class MemoizeMutable:
-    """Want to memoize the _evaluate function below. Because the tree
-    t is made of lists, ie is mutable, it can't be hashed, so the
-    usual memoization methods don't work. Instead, this class works.
-    It comes from Martelli's Cookbook [see
-    http://stackoverflow.com/questions/4669391/python-anyone-have-a-memoizing-decorator-that-can-handle-unhashable-arguments].
-    It uses cPickle to make a string, which is hashable. However, that
-    processing is slow, and it turns out to more than offset the
-    savings (even for a fairly large run).
-
-    Therefore one alternative is to try again to use tuples to
-    represent trees. However, numpy arrays are still unhashable. There
-    are also workarounds for that. But it's not clear so far that
-    memoisation will actually speed things up. Need to profile more
-    also."""
-    def __init__(self, fn):
-        self.fn = fn
-        self.memo = {}
-    def __call__(self, *args, **kwds):
-        s = cPickle.dumps(args, 1)+cPickle.dumps(kwds, 1)
-
-        # An alternative idea, a problem-specific hack
-        # s = str(args[0]) + args[1].tostring()
-        
-        if not self.memo.has_key(s): 
-            print "miss"  # DEBUG INFO
-            self.memo[s] = self.fn(*args, **kwds)
-        else:
-            print "hit"  # DEBUG INFO
-
-        return self.memo[s]
-
-def _evaluate(t, x):
-    if type(t) == str:
-        # it's a single string
-        if t[0] == "x":
-            idx = int(t[1:])
-            return x[idx] 
-        elif t == "x": return x[0]
-        elif t == "y": return x[1]
-        # special var generates a random var uniformly in [0, 1].
-        elif t == "RAND": return np.random.random(len(x[0]))
-        else:
-            try:
-                return np.ones(len(x[0])) * float(t)
-            except ValueError:
-                raise ValueError("Can't interpret " + t)
-    elif type(t) in (int, float):
-        return np.ones(len(x[0])) * t
-    else:
-        # it's a list: take t[0] and decide what to do
-        if   t[0] == "+": return add(evaluate(t[1], x), evaluate(t[2], x))
-        elif t[0] == "-": return subtract(evaluate(t[1], x), evaluate(t[2], x))
-        elif t[0] == "*": return multiply(evaluate(t[1], x), evaluate(t[2], x))
-        elif t[0] == "/":
-            try:
-                return divide(evaluate(t[1], x), evaluate(t[2], x))
-            except FloatingPointError:
-                return evaluate(t[1], x)
-        elif t[0] == "sin": return sin(evaluate(t[1], x))
-        elif t[0] == "cos": return cos(evaluate(t[1], x))
-        elif t[0] == "square": return square(evaluate(t[1], x))
-        elif t[0] == "AQ": return AQ(evaluate(t[1], x), evaluate(t[2], x))
-        elif t[0] == "SIF": return SIF(evaluate(t[1], x), evaluate(t[2], x), evaluate(t[3], x))
-        else:
-            raise ValueError("Can't interpret " + t[0])
-
-# evaluate = MemoizeMutable(_evaluate)
-evaluate = _evaluate
-
-def make_fn(t):
-    return lambda x: evaluate(t, x)
-
-def isatom(t):
-    return (isinstance(t, str) or isinstance(t, float)
-            or isinstance(t, int))
-
-def traverse(t, path=None):
-    """Depth-first traversal of the tree t, yielding at each step the
-    node, the subtree rooted at that node, and the path. The path
-    passed-in is the "path so far"."""
-    if path is None: path = tuple()
-    yield t[0], t, path + (0,)
-    for i, item in enumerate(t[1:], start=1):
-        if isatom(item):
-            yield item, item, path + (i,)
-        else:
-            for s in traverse(item, path + (i,)):
-                yield s
-
-def place_subtree_at_path(t, path, st):
-    """Place subtree st into tree t at the given path. Cannot
-    correctly place a single node at the root of t."""
-    if path == (0,):
-        if isatom(st):
-            raise ValueError("Cannot place a single node at the root")
-        else:
-            t[:] = st
-            return
-    if path[-1] == 0:
-        # Trying to overwrite a subtree rooted at the node given by
-        # path: We have to go back up one
-        path = path[:-1]
-    ptr = get_subtree(t, path[:-1])
-    ptr[path[-1]] = st # ...because it's the final index
-
-def get_node(t, path):
-    """Given a tree and a path, return the node at that path."""
-    s = get_subtree(t, path)
-    if isatom(s):
-        return s
-    else:
-        return s[0]
-
-def get_subtree(t, path):
-    """Given a tree and a path, return the subtree at that path."""
-    for item in path:
-        t = t[item]
-    return t
-
-def tree_depth(t):
-    """The depth of a tree is the maximum depth of any of its nodes.
-    FIXME if a bare node is passed-in, this will crash."""
-    d = 0
-    for nd, st, path in traverse(t):
-        dn = depth(path)
-        if dn > d: d = dn
-    return d
-
-def depth(path):
-    """The depth of any node is the number of nonzero elements in its
-    path."""
-    return len([el for el in path if el != 0])
-
 def mknd(rng):
-    """Make a node, consisting of a label, weights, and a bias
-    term."""
+    """Make a bubble-down node, consisting of a label, weights, and a
+    bias term."""
     lbl = rng.choice(fns.keys())
     arity = fns[lbl]
 
@@ -174,8 +40,8 @@ def mknd(rng):
     return (lbl, wts, bias)
 
 def mkst(rng):
-    """Make a subtree, consisting of a node and the appropriate number
-    of null children."""
+    """Make a bubble-down subtree, consisting of a bubble-down node
+    and the appropriate number of null children."""
     nd = mknd(rng)
     return [nd] + [None] * fns[nd[0]]
 
@@ -241,8 +107,8 @@ def bubble_down(n, rng):
             assert(child_idx is not None)
             current = current[1+child_idx] # +1 because subtree root is at 0
             path = path + (1+child_idx,) # +1 again
-        place_subtree_at_path(t, path, st)
-        d = depth(path)
+        gp.place_subtree_at_path(t, path, st)
+        d = gp.depth(path)
         if d > max_depth:
             max_depth = d
 
@@ -260,53 +126,17 @@ def add_leaves_remove_annotations(t, rng):
     return result
 
 
-def grow(maxdepth, rng):
-    if maxdepth == 0 or rng.random() < pTerminal:
-        return rng.choice(vars)
-    else:
-        nd = rng.choice(fns.keys())
-        return [nd] + [grow(maxdepth-1, rng) for i in range(fns[nd])]
-
-def make_zssNode_from_tuple(t):
-    """Convert my tuple representation into the Node object
-    representation used in zss."""
-    n = Node(t[0])
-    for s in t[1:]:
-        n.addkid(make_zssNode_from_tuple(s))
-    return n
-
-def tree_distance(t, s):
-    # print(t)
-    # print(s)
-    assert(t is not None)
-    assert(s is not None)
-    tN = make_zssNode_from_tuple(t)
-    sN = make_zssNode_from_tuple(s)
-    return zss.compare.distance(tN, sN)
-
-def semantic_distance(v, u):
-    """FIXME Inputs are vectors of numbers, ie values at fitness
-    cases. Distance is just Euclidean distance."""
-    try:
-        return np.linalg.norm(v - u)
-    except FloatingPointError as e:
-        print("FPE in distances", e)
-        return 0.0
-    except TypeError as e:
-        print("TypeError in distances", e)
-        return 0.0
-
 def generate_bubble_down_tree_and_fn_minn_maxn(minn, maxn, rng):
     t, d, n = bubble_down_minn_maxn(minn, maxn, rng)
-    return t, make_fn(t)
+    return t, gp.make_fn(t)
 
 def generate_bubble_down_tree_and_fn(rng):
     t, d, n = bubble_down(30, rng)
-    return t, make_fn(t)
+    return t, gp.make_fn(t)
 
 def generate_grow_tree_and_fn(rng):
     t = grow(6, rng)
-    return t, make_fn(t)
+    return t, gp.make_fn(t)
 
 def success(err):
     return False # let's just keep running so all runs are same length
@@ -377,8 +207,8 @@ def test():
     s, dep, nnodes = bubble_down(random.randint(10, 15), random)
     print(t)
     print(s)
-    tN = make_zssNode_from_tuple(t)
-    sN = make_zssNode_from_tuple(s)
+    tN = gp.make_zssNode_from_tuple(t)
+    sN = gp.make_zssNode_from_tuple(s)
     print(tN)
     print(sN)
     print(zss.compare.distance(tN, sN))
@@ -390,7 +220,7 @@ def test():
     print(cases)
     cases = zip(*cases)
     print(cases)
-    tf = make_fn(t)
+    tf = gp.make_fn(t)
     print(tf(cases))
 
 def test_grow():
@@ -400,7 +230,7 @@ def test_grow():
 def run(fitness_fn, rep="bubble_down"):
     variga.MINLEN = 100
     variga.MAXLEN = 100
-    variga.PHENOTYPE_DISTANCE = tree_distance
+    variga.PHENOTYPE_DISTANCE = gp.tree_distance
     variga.FITNESS = fitness_fn
     if rep == "bubble_down":
         variga.GENERATE = generate_bubble_down_tree_and_fn
@@ -419,44 +249,7 @@ def run(fitness_fn, rep="bubble_down"):
     variga.WRAPS = 1
     variga.main()
 
-# srff = fitness.benchmarks()["pagie_2d"]
-srff = fitness.benchmarks()["vanneschi_bioavailability"]
 
-pdff_n_samples = 100
-pdff = fitness.ProbabilityDistributionFitnessFunction(
-    np.linspace(0.0, 1.0, pdff_n_samples), pdff_n_samples)
-
-# vars = ["x", "y"]
-vars = ["x" + str(i) for i in range(srff.arity)]
-
-# consider allowing all the distributions here
-# [http://docs.scipy.org/doc/numpy/reference/routines.random.html] as
-# primitives in the pdff. Consider at least normal, Poisson, beta,
-# uniform, exponential, lognormal, weibull.
-
-# For now, RAND just gives a uniform.
-# vars = ["RAND"] # see evaluate() above
-
-consts = [0.1, 0.2, 0.3, 0.4, 0.5]
-vars = vars + consts
-# fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
-fns = {"+": 2, "-": 2, "*": 2, "/": 2}
-
-# SIF is the soft-if function from: Will Smart and Mengjie Zhang,
-# Using Genetic Programming for Multiclass Classification by
-# Simultaneously Solving Component Binary Classification Problems
-# http://www.mcs.vuw.ac.nz/comp/Publications/archive/CS-TR-05/CS-TR-05-1.pdf
-def SIF(x, y, z):
-    return (y/(1.0+e**(2*x)) + z/(1.0+e**(-2*x)))
-
-# AQ is the analytic quotient from: Ji Ni and Russ H. Drieberg and
-# Peter I. Rockett, "The Use of an Analytic Quotient Operator in
-# Genetic Programming", IEEE Transactions on Evolutionary Computation
-def AQ(x, y):
-    return x/sqrt(1.0+y*y)
-
-
-pTerminal = 0.2 # used in grow algorithm
 
 
 if __name__ == "__main__":
