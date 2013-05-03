@@ -16,13 +16,34 @@ import structure
 import fitness
 import variga
 
-from bubble_down import mknd, mkst, depth, get_node, get_subtree, traverse, make_fn, evaluate, grow, srff
-
+# TODO Move all the GP code from bubble_down into this file
+from bubble_down import mknd, mkst, depth, get_node, get_subtree, traverse, make_fn, evaluate, grow, srff, place_subtree_at_path, tree_depth
 from bubble_down import vars, fns
 
 mutation_prob = 0.01
 
-def mutate(t, p=mutation_prob):
+def iter_len(iter):
+    return sum(1 for _ in iter)
+
+def subtree_mutate(t):
+    # FIXME this deepcopy is probably necessary, but will probably be
+    # slow
+    t = copy.deepcopy(t)
+    
+    n = iter_len(traverse(t))
+    s = random.randint(1, n-1) # don't mutate at root
+    i = 0
+    for nd, st, path in traverse(t):
+        if i == s:
+            # stn = iter_len(st) # nnodes in subtree
+            # FIXME how should we set limit on size of tree given by
+            # grow? For now, setting depth limit to 3
+            place_subtree_at_path(t, path, grow(3, random))
+            break
+        i += 1
+    return t
+    
+def point_mutate(t, p=mutation_prob):
     """Point mutation of a tree. Traverse the tree. For each node,
     with low probability, replace it with another node of same arity.
     FIXME would be easy to use grow and place_subtree_at_path to get
