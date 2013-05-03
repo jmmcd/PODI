@@ -29,34 +29,37 @@ def pull_file(url):
 
 def main():
     urls = [
-        # "http://personal.disco.unimib.it/Vanneschi/bioavailability.txt",
-        # "http://personal.disco.unimib.it/Vanneschi/bioavailability_lookup.txt",
-        # "http://personal.disco.unimib.it/Vanneschi/toxicity.txt",
-        # "http://www.iwr.uni-heidelberg.de/groups/comopt/software/TSPLIB95/tsp/ALL_tsp.tar.gz",
-        # "http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/STSP.html",
+        "http://personal.disco.unimib.it/Vanneschi/bioavailability.txt",
+        "http://personal.disco.unimib.it/Vanneschi/bioavailability_lookup.txt",
+        "http://personal.disco.unimib.it/Vanneschi/toxicity.txt",
+        "http://www.iwr.uni-heidelberg.de/groups/comopt/software/TSPLIB95/tsp/ALL_tsp.tar.gz",
+        "http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/STSP.html",
         # TODO download all the Hamiltonian cycle probems,
         # capacitated arc-routing problems, etc from the same
         # source as TSPLIB
         # "http://casnew.iti.upv.es/index.php/evocompetitions/105-symregcompetition", # temporarily down?
         "http://symbolicregression.com/sites/default/files/DataSets/towerData.txt",
         "http://symbolicregression.com/sites/SRDocuments/DataSets/EmulatorProblem.zip",
+        "http://www.cs.ucl.ac.uk/staff/W.Langdon/ftp/gp-code/mackey_glass.tar.gz",
         ]
 
     for url in urls:
         pull_file(url)
+
+    # TODO the system commands are not platform-independent
     try:
         os.makedirs("TSPLIB")
     except OSError:
         pass
-    # os.rename("ALL_tsp.tar.gz", "TSPLIB/ALL_tsp.tar.gz")
-    # # TODO this should be platform-independent
-    # os.system("cd TSPLIB; tar xzf ALL_tsp.tar.gz")
-    # os.rename("STSP.html", "TSPLIB/STSP.html")
+    os.rename("ALL_tsp.tar.gz", "TSPLIB/ALL_tsp.tar.gz")
+    os.system("cd TSPLIB; tar xzf ALL_tsp.tar.gz")
+    os.rename("STSP.html", "TSPLIB/STSP.html")
     os.system("unzip EmulatorProblem.zip")
     os.remove("__MACOSX/EmulatorProblem/._EmpiricalEmulators.pdf")
     os.removedirs("__MACOSX")
     os.remove("EmulatorProblem.zip")
     os.remove("TSPLIB/ALL_tsp.tar.gz")
+    os.system("tar xzf mackey_glass.tar.gz")
     
 if __name__ == '__main__':
     try:
