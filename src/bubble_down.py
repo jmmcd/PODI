@@ -93,6 +93,10 @@ evaluate = _evaluate
 def make_fn(t):
     return lambda x: evaluate(t, x)
 
+def isatom(t):
+    return (isinstance(t, str) or isinstance(t, float)
+            or isinstance(t, int))
+
 def traverse(t, path=None):
     """Depth-first traversal of the tree t, yielding at each step the
     node, the subtree rooted at that node, and the path. The path
@@ -100,7 +104,7 @@ def traverse(t, path=None):
     if path is None: path = tuple()
     yield t[0], t, path + (0,)
     for i, item in enumerate(t[1:], start=1):
-        if isinstance(item, str):
+        if isatom(item):
             yield item, item, path + (i,)
         else:
             for s in traverse(item, path + (i,)):
@@ -114,7 +118,7 @@ def place_subtree_at_path(t, path, st):
 def get_node(t, path):
     """Given a tree and a path, return the node at that path."""
     s = get_subtree(t, path)
-    if isinstance(s, str):
+    if isatom(s):
         return s
     else:
         return s[0]
@@ -125,8 +129,17 @@ def get_subtree(t, path):
         t = t[item]
     return t
 
+def tree_depth(t):
+    """The depth of a tree is the maximum depth of any of its nodes.
+    FIXME if a bare node is passed-in, this will crash."""
+    d = 0
+    for nd, st, path in traverse(t):
+        dn = depth(path)
+        if dn > d: d = dn
+    return d
+
 def depth(path):
-    """The depth of any node is the number on nonzero elements in its
+    """The depth of any node is the number of nonzero elements in its
     path."""
     return len([el for el in path if el != 0])
 
