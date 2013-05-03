@@ -29,9 +29,10 @@ def pull_file(url):
 
 def main():
     urls = [
-        "http://personal.disco.unimib.it/Vanneschi/bioavailability.txt",
-        "http://personal.disco.unimib.it/Vanneschi/bioavailability_lookup.txt",
-        "http://personal.disco.unimib.it/Vanneschi/toxicity.txt",
+        "http://kdbio.inesc-id.pt/~sara/gptp2013/bioavailability.txt",
+        "http://kdbio.inesc-id.pt/~sara/gptp2013/bioavailability_lookup.txt",
+        "http://kdbio.inesc-id.pt/~sara/gptp2013/toxicity.txt",
+        "http://kdbio.inesc-id.pt/~sara/gptp2013/ppb.txt",
         "http://www.iwr.uni-heidelberg.de/groups/comopt/software/TSPLIB95/tsp/ALL_tsp.tar.gz",
         "http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/STSP.html",
         # TODO download all the Hamiltonian cycle probems,
