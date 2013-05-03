@@ -113,8 +113,12 @@ def traverse(t, path=None):
 def place_subtree_at_path(t, path, st):
     """Place subtree st into tree t at the given path. Cannot
     correctly place a single node at the root of t."""
-    if (path == (0,) and isatom(st)):
-        raise ValueError("Cannot place a single node at the root")
+    if path == (0,):
+        if isatom(st):
+            raise ValueError("Cannot place a single node at the root")
+        else:
+            t[:] = st
+            return
     if path[-1] == 0:
         # Trying to overwrite a subtree rooted at the node given by
         # path: We have to go back up one
