@@ -25,15 +25,15 @@ import bubble_down
 mutation_prob = 0.01
 
 
-# srff = fitness.benchmarks()["pagie_2d"]
-srff = fitness.benchmarks()["vanneschi_bioavailability"]
+# srff = fitness.benchmarks("pagie_2d")
+srff = fitness.benchmarks("vanneschi_bioavailability")
 
 pdff_n_samples = 100
 pdff = fitness.ProbabilityDistributionFitnessFunction(
     np.linspace(0.0, 1.0, pdff_n_samples), pdff_n_samples)
 
-# vars = ["x", "y"]
-vars = ["x" + str(i) for i in range(srff.arity)]
+# variables = ["x", "y"]
+variables = ["x" + str(i) for i in range(srff.arity)]
 
 # consider allowing all the distributions here
 # [http://docs.scipy.org/doc/numpy/reference/routines.random.html] as
@@ -41,10 +41,10 @@ vars = ["x" + str(i) for i in range(srff.arity)]
 # uniform, exponential, lognormal, weibull.
 
 # For now, RAND just gives a uniform.
-# vars = ["RAND"] # see evaluate() above
+# variables = ["RAND"] # see evaluate() above
 
-consts = [0.1, 0.2, 0.3, 0.4, 0.5]
-vars = vars + consts
+constants = [0.1, 0.2, 0.3, 0.4, 0.5]
+variables = variables + constants
 # fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
 fns = {"+": 2, "-": 2, "*": 2, "/": 2}
 
@@ -199,7 +199,7 @@ def depth(path):
 def grow(maxdepth, rng):
     pTerminal = 0.2 # FIXME not sure where/how to parameterise this
     if maxdepth == 0 or rng.random() < pTerminal:
-        return rng.choice(vars)
+        return rng.choice(variables)
     else:
         nd = rng.choice(fns.keys())
         return [nd] + [grow(maxdepth-1, rng) for i in range(fns[nd])]
@@ -302,7 +302,7 @@ def point_mutate(t, p=mutation_prob):
             else:
                 # this node is a terminal
                 arity = 0
-                options = [term for term in vars if term != nd]
+                options = [term for term in variables if term != nd]
                 if options:
                     place_subtree_at_path(t, path, random.choice(options))
     return t

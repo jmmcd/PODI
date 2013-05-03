@@ -510,29 +510,35 @@ class SymbolicRegressionFitnessFunction:
         mesh = mesh.transpose()
         return mesh
 
-def benchmarks():
-    return {
-        "identity": SymbolicRegressionFitnessFunction.init_from_target_fn(
+def benchmarks(key):
+    if   key == "identity":
+        return SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: x,
-            {"minv": [0.0], "maxv": [1.0], "incrv": [0.1]}),
-        
-        "vladislavleva_12": SymbolicRegressionFitnessFunction.init_from_target_fn(
+            {"minv": [0.0], "maxv": [1.0], "incrv": [0.1]})
+    
+    elif key == "vladislavleva_12":
+        return SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: exp(-x[0]) * power(x[0], 3.0) * cos(x[0]) * sin(x[0]) \
                 * ((cos(x[0]) * power(sin(x[0]), 2.0)) - 1.0),
-            {"minv": [0.05], "maxv": [10.0], "incrv": [0.1]}),
+            {"minv": [0.05], "maxv": [10.0], "incrv": [0.1]})
 
-        "pagie_2d": SymbolicRegressionFitnessFunction.init_from_target_fn(
+    elif key == "pagie_2d":
+        return SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: (1 / (1 + x[0] ** -4) + 1 / (1 + x[1] ** -4)),
-            {"minv": [-5, -5], "maxv": [5, 5], "incrv": [0.4, 0.4]}),
+            {"minv": [-5, -5], "maxv": [5, 5], "incrv": [0.4, 0.4]})
 
-        "pagie_3d": SymbolicRegressionFitnessFunction.init_from_target_fn(
+    elif key == "pagie_3d":
+        return SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: (1 / (1 + x[0] ** -4) + 1 / (1 + x[1] ** -4)
                        + 1 / (1 + x[2] ** -4)),
-            {"minv": [-5, -5, -5], "maxv": [5, 5, 5], "incrv": [0.4, 0.4, 0.4]}),
-        "vanneschi_bioavailability":
-            SymbolicRegressionFitnessFunction.init_from_data_file(
+            {"minv": [-5, -5, -5], "maxv": [5, 5, 5], "incrv": [0.4, 0.4, 0.4]})
+
+    elif key == "vanneschi_bioavailability":
+        return SymbolicRegressionFitnessFunction.init_from_data_file(
             "../data/bioavailability.txt", split=0.7, randomise=True)
-        }
+
+    else:
+        return "Unknown benchmark problem " + key
 
     
 if __name__ == "__main__":

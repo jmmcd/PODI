@@ -23,8 +23,8 @@ import gp
 def mknd(rng):
     """Make a bubble-down node, consisting of a label, weights, and a
     bias term."""
-    lbl = rng.choice(fns.keys())
-    arity = fns[lbl]
+    lbl = rng.choice(gp.fns.keys())
+    arity = gp.fns[lbl]
 
     # Slight optimisation: the real code is this:
     # wts = sorted([rng.random() for i in range(arity - 1)])
@@ -43,7 +43,7 @@ def mkst(rng):
     """Make a bubble-down subtree, consisting of a bubble-down node
     and the appropriate number of null children."""
     nd = mknd(rng)
-    return [nd] + [None] * fns[nd[0]]
+    return [nd] + [None] * gp.fns[nd[0]]
 
 def choose_child(weights, val):
     """Calculate an index, ie the slot where val fits, given val (in
@@ -84,7 +84,7 @@ def bubble_down(n, rng):
     optimisation."""
 
     if n <= 1:
-        return [rng.choice(vars)]
+        return [rng.choice(gp.variables)]
     t = mkst(rng)
     node_cnt = len(t)
     max_depth = 0
@@ -120,7 +120,7 @@ def add_leaves_remove_annotations(t, rng):
     result = [t[0][0]] # first [0] gets node, second [0] gets label
     for item in t[1:]:
         if item is None:
-            result.append(rng.choice(vars)) # fill in a leaf
+            result.append(rng.choice(gp.variables)) # fill in a leaf
         else:
             result.append(add_leaves_remove_annotations(item, rng))
     return result
@@ -148,7 +148,7 @@ def study_structure(basename, rep="bubble_down"):
     structure.MAXLEN = 100
     structure.SEMANTIC_DISTANCE = semantic_distance
     structure.PHENOTYPE_DISTANCE = tree_distance
-    structure.FITNESS = srff
+    structure.FITNESS = gp.srff
     structure.CROSSOVER_PROB = 1.0
     structure.MAXV = sys.maxint
     structure.WRAPS = 0
@@ -262,13 +262,13 @@ if __name__ == "__main__":
     elif sys.argv[1] == "bubble_down_structure":
         study_structure(sys.argv[2], "bubble_down")
     elif sys.argv[1] == "run_bubble_down":
-        run(srff, "bubble_down")
+        run(gp.srff, "bubble_down")
     elif sys.argv[1] == "run_grow":
-        run(srff, "grow")
+        run(gp.srff, "grow")
     elif sys.argv[1] == "run_bubble_down_prob":
-        run(pdff, "bubble_down")
+        run(gp.pdff, "bubble_down")
     elif sys.argv[1] == "run_grow_prob":
-        run(pdff, "grow")
+        run(gp.pdff, "grow")
     else:
         print("Usage: <test|structure>")
         print(sys.argv)
