@@ -45,8 +45,7 @@ variables = ["x" + str(i) for i in range(srff.arity)]
 
 constants = [0.1, 0.2, 0.3, 0.4, 0.5]
 variables = variables + constants
-# fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
-fns = {"+": 2, "-": 2, "*": 2, "/": 2}
+fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
 
 class MemoizeMutable:
     """Want to memoize the _evaluate function below. Because the tree
@@ -109,9 +108,10 @@ def _evaluate(t, x):
                 return np.ones(len(x[0])) * float(t)
             except ValueError:
                 raise ValueError("Can't interpret " + t)
-    elif type(t) in (int, float):
+    elif type(t) in (int, float, np.float64):
         return np.ones(len(x[0])) * t
     else:
+        assert(type(t) == list)
         # it's a list: take t[0] and decide what to do
         if   t[0] == "+": return add(evaluate(t[1], x), evaluate(t[2], x))
         elif t[0] == "-": return subtract(evaluate(t[1], x), evaluate(t[2], x))
@@ -321,6 +321,60 @@ def semantic_geometric_mutate(t, ms=0.01):
     tr2 = grow(2, random)
     return ['+', t, ['*', ms, ['-', tr1, tr2]]]
 
+def semantic_geometric_mutate_differentiate(t, fitness_fn):
+    """Semantic geometric mutation with differentiation:
+
+    tm = t + ms * tr
+    
+    where tr is a randomly-generated tree and ms is the mutation step,
+    which can be negative, found by diffentiating the new error
+    RMSE(y, t + ms * tr) with respect to ms. To make this work the
+    mutation operator needs to be able to evaluate, so we have to pass
+    in the fitness function.
+
+    The optimum mutation step ms is such that RMSE is minimised. But
+    minimising RMSE is equivalent to minimising mean square error
+    (MSE):
+
+    MSE = mean((y - (t + ms*tr))**2)
+        = mean(((y-t) - ms*tr)**2)
+        = mean((y-t)**2 - 2*(y-t)*ms*tr + ms**2*tr**2)
+
+    Differentiate wrt ms:
+    
+    d(MSE)/d(ms) = mean(-2*(y-t)*tr + 2*ms*tr**2)
+                 = -2*mean((y-t)*tr) + 2*ms*mean(tr**2)
+                 
+    This is zero when:
+    
+    2*mean((y-t)*tr) = 2*ms*mean(tr**2)
+	
+    Therefore the optimum ms is:
+    
+    ms = mean((y-t)*tr) / mean(tr**2)"""
+
+
+    # Generate a tree tr and make sure it won't return all zeros,
+    # which would trigger a divide-by-zero. Start with all zeros to
+    # get into the while loop.
+    tr_out = np.zeros(2)
+    while np.mean(tr_out**2) < 0.000001:
+        tr = grow(3, random)
+        tr_out = fitness_fn.get_semantics(make_fn(tr))[1]
+
+    t_out = fitness_fn.get_semantics(make_fn(t))[1] # should be cached already
+    y = fitness_fn.train_y
+    # formula from above comment
+    ms = np.mean((y-t_out)*tr_out) / np.mean(tr_out**2)
+
+    # TODO if ms is close to zero, we could reject the step and try
+    # again, for a kind of ad-hoc regularisation. The threshold could
+    # be annealed during the run, perhaps. For now, just accept the
+    # step regardless.
+    
+    return ['+', t, ['*', ms, tr]]
+
+
 def hillclimb(fitness_fn, n_evals=2000, popsize=100):
     """Hill-climbing optimisation. """
 
@@ -333,11 +387,14 @@ def hillclimb(fitness_fn, n_evals=2000, popsize=100):
     ft, _ = fitness_fn.get_semantics(fnt)
     
     for i in xrange(n_evals):
-        # mutation step size
+        # mutation step size -- random for now
         ms = np.random.normal()
 
-        # Mutate and get fitness of child
-        s = semantic_geometric_mutate(t, ms)
+        # Mutate 
+        s = semantic_geometric_mutate_differentiate(t, fitness_fn)
+        # s = semantic_geometric_mutate(t, ms)
+
+        # Evaluate child
         fns = make_fn(s)
         fs, _ = fitness_fn.get_semantics(fns)
 
@@ -353,7 +410,7 @@ def hillclimb(fitness_fn, n_evals=2000, popsize=100):
                                         ft, fitness_fn.test(fnt), str(t)))
         
 if __name__ == "__main__":
-    # srff is a symbolic regression problem -- it's the Vanneschi et
-    # al bioavailability one. you have to run the get_data.py script
-    # first to download the data.
-    hillclimb(bubble_down.srff, 200, 20)
+    # srff is a symbolic regression problem -- defined at top of file.
+    # you might have to run the get_data.py script first to download
+    # data.
+    hillclimb(srff, 500, 10)
