@@ -135,7 +135,10 @@ def generate_bubble_down_tree_and_fn(rng):
     return t, gp.make_fn(t)
 
 def generate_grow_tree_and_fn(rng):
-    t = grow(6, rng)
+    return generate_grow_tree_and_fn_maxd(rng, 6)
+
+def generate_grow_tree_and_fn_maxd(rng, max_depth=3):
+    t = gp.grow(max_depth, rng)
     return t, gp.make_fn(t)
 
 def success(err):
@@ -225,7 +228,7 @@ def test():
 
 def test_grow():
     for i in range(7):
-        print(grow(i, random))
+        print(gp.grow(i, random))
 
 def run(fitness_fn, rep="bubble_down"):
     variga.MINLEN = 100

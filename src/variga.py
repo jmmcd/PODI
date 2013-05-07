@@ -142,6 +142,8 @@ def main(seed=None):
     if seed is not None:
         random.seed(seed)
     pop = [make_individual(None) for i in range(POPSIZE)]
+    if COEVOLUTIONARY_FITNESS:
+        COEVOLUTIONARY_FITNESS(pop)
     for gen in range(GENERATIONS):
         if stats(pop, gen):
             sys.exit()

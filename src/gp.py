@@ -24,9 +24,7 @@ import bubble_down
 
 mutation_prob = 0.01
 
-
-# srff = fitness.benchmarks("pagie_2d")
-srff = fitness.benchmarks("vanneschi_bioavailability")
+srff = fitness.benchmarks("pagie_2d")
 
 pdff_n_samples = 100
 pdff = fitness.ProbabilityDistributionFitnessFunction(
