@@ -133,6 +133,9 @@ def step(pop):
     # elite: replace worst
     newpop.sort(key=ind_compare)
     newpop[:ELITE] = elite
+
+    if COEVOLUTIONARY_FITNESS:
+        COEVOLUTIONARY_FITNESS(newpop)
     return newpop
     
 def main(seed=None):
@@ -173,6 +176,7 @@ def success(x):
     return x > 90
 GENERATE = generate
 FITNESS = fitness()
+COEVOLUTIONARY_FITNESS = None
 SUCCESS = success
 MAXIMISE = True
 
