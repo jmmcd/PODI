@@ -21,7 +21,7 @@ from zss.test_tree import Node
 import numpy as np
 from numpy import add, subtract, multiply, divide, sin, cos, exp, log, power, square, sqrt
 np.seterr(all='raise', under='ignore')
-from sklearn.linear_model import enet_path
+from sklearn.linear_model import enet_path, ElasticNetCV
 
 import structure
 import fitness
@@ -33,35 +33,41 @@ def LCCB_coevo(fitness_fn, pop):
     y = fitness_fn.train_y
     # Make a new array composed of pop[i].semantics for all i
     # (pop[i].semantics has already been calculated)
-    X_cols = []
+    X = None
     for ind in pop:
         if (ind.phenotype and ind.fitness != sys.maxint
             and all(np.isfinite(ind.semantics))):
-            X_cols.append(ind.semantics)
+            if X is None:
+                X = ind.semantics
+            else:
+                X = np.c_[X, ind.semantics]
         else:
             print("omitting a column")
-            X_cols.append(np.zeros(len(y)))
-    X = np.asarray(X_cols).T
+            if X is None:
+                X = np.zeros(len(y))
+            else:
+                X = np.c_[X, np.zeros(len(y))]
+
     eps = 5e-3
 
-    # FIXME unbias the data as in FFX, and later rebias?
-    
-    # then linear regression with regularisation
-    models = enet_path(X, y, eps=eps, l1_ratio=0.8)
-    alphas = np.array([model.alpha for model in models])
-    coefss = np.array([model.coef_ for model in models])
+    # FIXME FFX processes the data so that has zero mean and unit
+    # variance before applying the LR... should we do that?
 
-    # somehow choose just one model -- FIXME for now just choosing
-    # model number 10
-    model, alpha, coefs = models[10], alphas[10], coefss[10]
+    # Use ElasticNet with cross-validation, which will automatically
+    # get a good value for regularisation
+    model = ElasticNetCV()
+    model.fit(X, y)
+    coefs = model.coef_
+    output = model.predict(X)
+    rmse = fitness_fn.rmse(y, output)
+    print("rmse", rmse)
 
-    # the model score is our overall result. it is an R^2 values,
-    # hence 0 is bad, 1 is good.
-    print("score", model.score(X, y))
-    
     # Assign the magnitude of coefficients as individual fitness
     # values. Have to construct a new individual because tuples are
-    # immutable
+    # immutable. FIXME this is not a great method -- it's likely that
+    # the population will converge on one or a few basis functions,
+    # and then the performance of the ENet will decrease because there
+    # won't be enough independent basis functions to work with.
     pop = [variga.Individual(genome=pop[i].genome,
                              used_codons=pop[i].used_codons,
                              fitness=-abs(coefs[i]),
@@ -89,8 +95,8 @@ def run(fitness_fn, rep="bubble_down"):
         raise ValueError
     variga.MAXIMISE = False    
     variga.SUCCESS = lambda x: False # FIXME
-    variga.POPSIZE = 200
-    variga.GENERATIONS = 50
+    variga.POPSIZE = 50
+    variga.GENERATIONS = 20
     variga.PMUT = 0.01
     variga.CROSSOVER_PROB = 0.7
     variga.ELITE = 1
@@ -100,4 +106,4 @@ def run(fitness_fn, rep="bubble_down"):
 
 
 if __name__ == "__main__":
-    run(srff, rep="grow")
+    run(srff)
