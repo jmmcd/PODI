@@ -37,16 +37,14 @@ def LCCB_coevo(fitness_fn, pop):
     for ind in pop:
         if (ind.phenotype and ind.fitness != sys.maxint
             and all(np.isfinite(ind.semantics))):
-            if X is None:
-                X = ind.semantics
-            else:
-                X = np.c_[X, ind.semantics]
+            col = ind.semantics
         else:
-            print("omitting a column")
-            if X is None:
-                X = np.zeros(len(y))
-            else:
-                X = np.c_[X, np.zeros(len(y))]
+            print("Omitting a column")
+            col = np.zeros(len(y))
+        if X is None:
+            X = col
+        else:
+            X = np.c_[X, col]
 
     eps = 5e-3
 
