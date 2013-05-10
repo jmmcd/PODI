@@ -2,14 +2,23 @@
 # package to make this work? Anyway, the following are some commands
 # to get a few needed libraries.
 
-Can get all of these from Anaconda: numpy, scipy, sklearn, matplotlib,
+# Can get all of these from Anaconda: numpy, scipy, sklearn, matplotlib,
+# pylab
+numpy
+scipy
+sklearn
+matplotlib
 pylab
 
-Tree-edit distance:
-git clone https://github.com/timtadh/zhang-shasha.git
+# Tree-edit distance:
+# git clone https://github.com/timtadh/zhang-shasha.git
 
-Levenshtein distance:
-hg clone https://code.google.com/p/py-editdist/
+-e git+https://github.com/timtadh/zhang-shasha.git
 
-(pip install editdist used to work, not anymore?)
+# Levenshtein distance:
+# hg clone https://code.google.com/p/py-editdist/
+# (pip install editdist used to work, not anymore?)
+-e hg+https://code.google.com/p/py-editdist/#egg=editdist
+
+
 
