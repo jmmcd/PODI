@@ -230,6 +230,11 @@ def test_grow():
     for i in range(7):
         print(gp.grow(i, random))
 
+def test_bubble_down():
+    for rep in range(10000):
+        for i in range(15):
+            b = bubble_down(i, random)
+
 def run(fitness_fn, rep="bubble_down"):
     variga.MINLEN = 100
     variga.MAXLEN = 100
@@ -260,6 +265,8 @@ if __name__ == "__main__":
         test()
     elif sys.argv[1] == "test_grow":
         test_grow()
+    elif sys.argv[1] == "test_bubble_down":
+        test_bubble_down()
     elif sys.argv[1] == "grow_structure":
         study_structure(sys.argv[2], "grow")
     elif sys.argv[1] == "bubble_down_structure":
