@@ -47,6 +47,38 @@ def eval_or_exec(expr):
         retval = None
     return retval
 
+class MemoizeMutable:
+    """Want to memoize the _evaluate function below. Because the tree
+    t is made of lists, ie is mutable, it can't be hashed, so the
+    usual memoization methods don't work. Instead, this class works.
+    It comes from Martelli's Cookbook [see
+    http://stackoverflow.com/questions/4669391/python-anyone-have-a-memoizing-decorator-that-can-handle-unhashable-arguments].
+    It uses cPickle to make a string, which is hashable. However, that
+    processing is slow, and it turns out to more than offset the
+    savings (even for a fairly large run).
+
+    Therefore one alternative is to try again to use tuples to
+    represent trees. However, numpy arrays are still unhashable. There
+    are also workarounds for that. But it's not clear so far that
+    memoisation will actually speed things up. Need to profile more
+    also."""
+    def __init__(self, fn):
+        self.fn = fn
+        self.memo = {}
+    def __call__(self, *args, **kwds):
+        s = cPickle.dumps(args, 1)+cPickle.dumps(kwds, 1)
+
+        # An alternative idea, a problem-specific hack
+        # s = str(args[0]) + args[1].tostring()
+        
+        if not self.memo.has_key(s): 
+            print "miss"  # DEBUG INFO
+            self.memo[s] = self.fn(*args, **kwds)
+        else:
+            print "hit"  # DEBUG INFO
+
+        return self.memo[s]
+
 def default_fitness(maximise):
     """Return default (worst) fitness, given maximization or
     minimization."""
@@ -348,8 +380,7 @@ class SymbolicRegressionFitnessFunction:
         """Run the function over the training set. Return the fitness
         and the vector of results (the "semantics" of the function).
         Return (default_fitness, None) on error. Pass test=True to run
-        the function over the testing set instead. TODO try
-        memoizing."""
+        the function over the testing set instead."""
 
         # ad-hoc memoizing
         s = str(fn.func_closure[0].cell_contents)
