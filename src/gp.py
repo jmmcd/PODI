@@ -25,11 +25,13 @@ import bubble_down
 mutation_prob = 0.01
 
 # srff = fitness.benchmarks("pagie_2d")
-srff = fitness.benchmarks("vanneschi_bioavailability")
+# srff = fitness.benchmarks("vanneschi_bioavailability")
+# FIXME this stuff shouldn't be done at module level
+srff = fitness.benchmarks("evocompetitions_2010")
 
-pdff_n_samples = 100
-pdff = fitness.ProbabilityDistributionFitnessFunction(
-    np.linspace(0.0, 1.0, pdff_n_samples), pdff_n_samples)
+# pdff_n_samples = 100
+# pdff = fitness.ProbabilityDistributionFitnessFunction(
+#     np.linspace(0.0, 1.0, pdff_n_samples), pdff_n_samples)
 
 # variables = ["x", "y"]
 variables = ["x" + str(i) for i in range(srff.arity)]
@@ -189,7 +191,8 @@ def tree_distance(t, s):
     return zss.compare.distance(tN, sN)
 
 def semantic_distance(v, u):
-    """FIXME Inputs are vectors of numbers, ie values at fitness
+    """Semantic distance between two semantics objects. Assume that
+    inputs are vectors of numbers, ie values at SR-style fitness
     cases. Distance is just Euclidean distance."""
     try:
         return np.linalg.norm(v - u)
@@ -204,6 +207,7 @@ def iter_len(iter, filter=lambda x: True):
     return sum(1 for x in iter if filter(x))
 
 def crossover(t1, t2):
+    """Subtree crossover. Unused for now."""
     t1 = copy.deepcopy(t1)
     t2 = copy.deepcopy(t2)
 
@@ -228,30 +232,37 @@ def crossover(t1, t2):
     return t1, t2
 
 def subtree_mutate(t):
-    # FIXME this deepcopy is probably necessary, but will probably be
-    # slow
+    """Mutate a tree by growing a new subtree at a random location."""
+    
+    # this deepcopy is necessary, but will be slow
     t = copy.deepcopy(t)
      
     n = iter_len(traverse(t))
-    s = random.randint(1, n-1) # don't mutate at root
-    i = 0
-    for nd, st, path in traverse(t):
-        if i == s:
-            # stn = iter_len(st) # nnodes in subtree
-            # FIXME how should we set limit on size of tree given by
-            # grow? For now, setting depth limit to 3
-            place_subtree_at_path(t, path, grow(3, random))
-            break
-        i += 1
-    return t
+    s = random.randint(0, n-1)
+
+    if s == 0:
+        # mutate at root: return an entirely new tree. can't be done
+        # using place_subtree_at_path as below
+        return grow(3, random)
+    else:
+        # don't mutate at root
+        i = 0
+        for nd, st, path in traverse(t):
+            if i == s:
+                # stn = iter_len(st) # nnodes in subtree
+                # FIXME how should we set limit on size of tree given by
+                # grow? For now, setting depth limit to 3
+                place_subtree_at_path(t, path, grow(3, random))
+                break
+            i += 1
+        return t
     
 def point_mutate(t, p=mutation_prob):
     """Point mutation of a tree. Traverse the tree. For each node,
-    with low probability, replace it with another node of same arity.
-    FIXME would be easy to use grow and place_subtree_at_path to get
-    subtree mutation."""
-    # FIXME this deepcopy is probably necessary, but will probably be
-    # slow
+    with low probability, replace it with another node of same
+    arity."""
+    
+    # this deepcopy is necessary, but will be slow
     t = copy.deepcopy(t)
 
     # depth-first traversal of tree
@@ -342,9 +353,12 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn):
     return ['+', t, ['*', ms, tr]]
 
 
-def hillclimb(fitness_fn, n_evals=2000, popsize=100):
+def hillclimb(fitness_fn, mutation_type="optimal_ms",
+              ngens=2000, popsize=1, print_every=200):
     """Hill-climbing optimisation. """
-
+    assert(print_every % popsize == 0)
+    evals = 0
+    
     print("# generation evaluations best_fitness best_test_fitness best_phenotype")
     # Generate an initial solution
     t = grow(2, random)
@@ -353,31 +367,44 @@ def hillclimb(fitness_fn, n_evals=2000, popsize=100):
     fnt = make_fn(t)
     ft, _ = fitness_fn.get_semantics(fnt)
     
-    for i in xrange(n_evals):
-        # mutation step size -- random for now
-        ms = np.random.normal()
+    for gen in xrange(ngens):
 
-        # Mutate 
-        s = semantic_geometric_mutate_differentiate(t, fitness_fn)
-        # s = semantic_geometric_mutate(t, ms)
+        # make a lot of new individuals by mutation
+        if mutation_type == "GSGP_optimal_ms":
+            # Mutate and differentiate to get the best possibility
+            s = [semantic_geometric_mutate_differentiate(t, fitness_fn)
+                 for i in range(popsize)]
+                
+        elif mutation_type == "GSGP":
+            # mutation step size randomly chosen
+            s = [semantic_geometric_mutate(t, np.random.normal())
+                 for i in range(popsize)]
 
-        # Evaluate child
-        fns = make_fn(s)
-        fs, _ = fitness_fn.get_semantics(fns)
+        elif mutation_type == "GP":
+            # mutation step size randomly chosen
+            s = [subtree_mutate(t, np.random.normal())
+                 for i in range(popsize)]
+        else:
+            raise ValueError("Unknown mutation type " + mutation_type)
 
-        # Keep the child only if better
-        if fs < ft:
-            t, ft, fnt = s, fs, fns
-            
-        # Simulate generations by printing after popsize have been
-        # evaluated, even though there is no population in this
-        # hillclimbing algorithm.
-        if i % popsize == popsize - 1: 
-            print("%d %d %f %f : %s" % (i % popsize, i,
+        # test the new individuals and keep only the single best
+        # 
+        for si in s:
+            # Evaluate child
+            fnsi = make_fn(si)
+            fsi, _ = fitness_fn.get_semantics(fnsi)
+
+            # Keep the child only if better
+            if fsi < ft:
+                t, ft, fnt = si, fsi, fnsi
+
+        evals += popsize
+        if evals % print_every == 0:
+            print("%d %d %f %f : %s" % (gen, evals, 
                                         ft, fitness_fn.test(fnt), str(t)))
         
 if __name__ == "__main__":
     # srff is a symbolic regression problem -- defined at top of file.
     # you might have to run the get_data.py script first to download
     # data.
-    hillclimb(srff, 500, 10)
+    hillclimb(srff, "GSGP_optimal_ms", 5, 1, 1)
