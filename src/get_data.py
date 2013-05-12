@@ -38,10 +38,10 @@ def main():
         # TODO download all the Hamiltonian cycle probems,
         # capacitated arc-routing problems, etc from the same
         # source as TSPLIB
-        # "http://casnew.iti.upv.es/index.php/evocompetitions/105-symregcompetition", # temporarily down?
         "http://symbolicregression.com/sites/default/files/DataSets/towerData.txt",
         "http://symbolicregression.com/sites/SRDocuments/DataSets/EmulatorProblem.zip",
         "http://www.cs.ucl.ac.uk/staff/W.Langdon/ftp/gp-code/mackey_glass.tar.gz",
+        "http://gpbenchmarks.org/wp-content/uploads/2013/05/evocompetitions_2010.zip",
         ]
 
     for url in urls:
@@ -61,6 +61,8 @@ def main():
     os.remove("EmulatorProblem.zip")
     os.remove("TSPLIB/ALL_tsp.tar.gz")
     os.system("tar xzf mackey_glass.tar.gz")
+    os.system("unzip evocompetitions_2010.zip")
+    os.remove("evocompetitions_2010.zip")
     
 if __name__ == '__main__':
     try:

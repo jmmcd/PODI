@@ -17,7 +17,6 @@ except:
     # back to the levenshtein function in structure.py in this case.)
     pass
 
-
 def eval_or_exec(expr):
     """Use eval or exec to interpret expr.
 
@@ -311,24 +310,52 @@ class SymbolicRegressionFitnessFunction:
         self.memo = {}
 
     @classmethod
-    def init_from_data_file(cls, filename, split=0.9,
+    def init_from_data_file(cls, filename, test_filename=None,
+                            split=0.9,
                             randomise=False, defn="rmse"):
-        """Construct an SRFF by reading data from a file. Split the
+        """Construct an SRFF by reading training data from a file. If
+        a test_filename is given, get test data there. Else split the
         data according to split, eg 0.9 means 90% for training, 10%
         for testing. If randomise is True, take random rows; else take
-        the last rows as test data. TODO: allow more flexibile
-        test/train splits?"""
-        d = np.genfromtxt(filename)
-        if randomise:
-            # this shuffles the rows
-            np.random.shuffle(d)
+        the last rows as test data. Tries to handle csv files
+        correctly, else genfromtxt assumes it is whitespace-separated.
+        # character is used for comment lines."""
+        
+        if filename.endswith(".csv"):
+            delimiter = ","
+        else:
+            delimiter = None
+        d = np.genfromtxt(filename, delimiter=delimiter)
         dX = d[:,:-1]
         dy = d[:,-1]
-        idx = int(split * len(d))
-        train_X = dX[:idx].T
-        train_y = dy[:idx]
-        test_X = dX[idx:].T
-        test_y = dy[idx:]
+        if test_filename:
+            # separate filename for test
+            train_X = dX.T
+            train_y = dy
+            # assume same filename suffix and delimiter
+            d = np.genfromtxt(test_filename, delimiter=delimiter)
+            test_X = d[:,:-1].T
+            test_y = d[:,-1]
+        else:
+            # get data from same file for both train and test
+            if randomise:
+                # shuffle the rows before allocating train/test
+                np.random.shuffle(d)
+            idx = int(split * len(d))
+            train_X = dX[:idx].T
+            train_y = dy[:idx]
+            test_X = dX[idx:].T
+            test_y = dy[idx:]
+
+        # print "len(train_X), len(test_X)"
+        # print len(train_X), len(test_X)
+        # print "len(train_X[0]), len(train_y), len(test_X[0]), len(test_y)"
+        # print len(train_X[0]), len(train_y), len(test_X[0]), len(test_y)
+        assert len(train_X.shape) == len(test_X.shape) == 2
+        assert len(train_y.shape) == len(test_y.shape) == 1
+        assert len(train_X) == len(test_X) # how many independent vars
+        assert len(train_X[0]) == len(train_y)
+        assert len(test_X[0]) == len(test_y)
         return SymbolicRegressionFitnessFunction(train_X, train_y,
                                                  test_X, test_y, defn)
 
@@ -575,6 +602,11 @@ def benchmarks(key):
         return SymbolicRegressionFitnessFunction.init_from_data_file(
             "../data/towerData.txt", split=0.7, randomise=True)
 
+    elif key == "evocompetitions_2010":
+        return SymbolicRegressionFitnessFunction.init_from_data_file(
+            "../data/evocompetitions_2010/evocompetitions_2010_train.csv",
+            test_filename="../data/evocompetitions_2010/evocompetitions_2010_test.csv")
+
     else:
         return "Unknown benchmark problem " + key
 
@@ -616,20 +648,20 @@ if __name__ == "__main__":
         print(m(fn1))
 
     elif sys.argv[1] == "test_sr":
-        sr = benchmarks()["vladislavleva_12"]
+        sr = benchmarks("vladislavleva_12")
         g = "lambda x: 2*x"
         print(sr(g))
-        sr = benchmarks()["identity"]
+        sr = benchmarks("identity")
         g = "lambda x: x"
         print(sr(g))
 
     elif sys.argv[1] == "test_pagie":
-        sr = benchmarks()["pagie_2d"]
+        sr = benchmarks("pagie_2d")
         g = "lambda x: (1 / (1 + x[0] ** -4) + 1 / (1 + x[1] ** -4))"
         print(sr(g))
 
     elif sys.argv[1] == "test_bioavailability":
-        sr = benchmarks()["vanneschi_bioavailability"]
+        sr = benchmarks("vanneschi_bioavailability")
         g = "lambda x: x[0]*x[1]"
         print(sr(g))
         
