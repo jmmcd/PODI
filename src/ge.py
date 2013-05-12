@@ -69,24 +69,25 @@ def traverse(t, path=None):
             for s in traverse(item, path + (i,)):
                 yield s
 
-grammar = Grammar("grammars/symbolic_regression_2d.bnf")
-srff = fitness.benchmarks()["pagie_2d"]
-MAX_CODON = 127
-def generate(random):
-    return random_str_mod(random, grammar)
-def success(err):
-    return False # let's just keep running so all runs are same length
-variga.GENERATE = generate
-variga.FITNESS = srff
-variga.SUCCESS = success
-variga.POPSIZE = 1000
-variga.GENERATIONS = 40
-variga.PMUT = 0.01
-variga.CROSSOVER_PROB = 0.7
-variga.MINLEN = 100 # ponyge uses 100 for all initialisation, no min/maxlen
-variga.MAXLEN = 100
-variga.MAXIMISE = False
-variga.ELITE = 1
-variga.TOURNAMENT_SIZE = 3
-variga.WRAPS = 1
-variga.main()
+if __name__ == "__main__":
+    grammar = Grammar("grammars/symbolic_regression_2d.bnf")
+    srff = fitness.benchmarks("pagie_2d")
+    MAX_CODON = 127
+    def generate(random):
+        return random_str_mod(random, grammar)
+    def success(err):
+        return False # let's just keep running so all runs are same length
+    variga.GENERATE = generate
+    variga.FITNESS = srff
+    variga.SUCCESS = success
+    variga.POPSIZE = 1000
+    variga.GENERATIONS = 40
+    variga.PMUT = 0.01
+    variga.CROSSOVER_PROB = 0.7
+    variga.MINLEN = 100 # ponyge uses 100 for all initialisation, no min/maxlen
+    variga.MAXLEN = 100
+    variga.MAXIMISE = False
+    variga.ELITE = 1
+    variga.TOURNAMENT_SIZE = 3
+    variga.WRAPS = 1
+    variga.main()
