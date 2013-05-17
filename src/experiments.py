@@ -124,7 +124,14 @@ def print_data(rep, dist, bpdata):
     #         rmean, rstddev, rmedian, 
     #         mmean, mstddev, mps, mmedian,
     #         cmean, cstddev, cps, cmedian))
-    # print(r"\end{tabular}")        
+    # print(r"\end{tabular}")
+
+def hill_climbing_exps():
+    from gp import hillclimb, srff
+    hillclimb(srff, "GP", 5, 1, 1, 3)
+    hillclimb(srff, "GSGP", 5, 1, 1, 3)
+    hillclimb(srff, "GSGP-optimal-ms", 5, 1, 1, 3)
+
                 
 if __name__ == "__main__":
-    gp_distances_boxplots(sys.argv[1])
+    hill_climbing_exps()

@@ -165,13 +165,13 @@ def depth(path):
     path."""
     return len([el for el in path if el != 0])
 
-def grow(maxdepth, rng):
+def grow(st_maxdepth, rng):
     pTerminal = 0.2 # FIXME not sure where/how to parameterise this
-    if maxdepth == 0 or rng.random() < pTerminal:
+    if st_maxdepth == 0 or rng.random() < pTerminal:
         return rng.choice(variables)
     else:
         nd = rng.choice(fns.keys())
-        return [nd] + [grow(maxdepth-1, rng) for i in range(fns[nd])]
+        return [nd] + [grow(st_maxdepth-1, rng) for i in range(fns[nd])]
 
 def make_zssNode_from_tuple(t):
     """Convert my tuple representation into the Node object
@@ -231,7 +231,7 @@ def crossover(t1, t2):
         i1 += 1
     return t1, t2
 
-def subtree_mutate(t):
+def subtree_mutate(t, st_maxdepth=3):
     """Mutate a tree by growing a new subtree at a random location."""
     
     # this deepcopy is necessary, but will be slow
@@ -243,16 +243,13 @@ def subtree_mutate(t):
     if s == 0:
         # mutate at root: return an entirely new tree. can't be done
         # using place_subtree_at_path as below
-        return grow(3, random)
+        return grow(st_maxdepth, random)
     else:
         # don't mutate at root
         i = 0
         for nd, st, path in traverse(t):
             if i == s:
-                # stn = iter_len(st) # nnodes in subtree
-                # FIXME how should we set limit on size of tree given by
-                # grow? For now, setting depth limit to 3
-                place_subtree_at_path(t, path, grow(3, random))
+                place_subtree_at_path(t, path, grow(st_maxdepth, random))
                 break
             i += 1
         return t
@@ -286,7 +283,7 @@ def point_mutate(t, p=mutation_prob):
     return t
             
             
-def semantic_geometric_mutate(t, ms=0.01):
+def semantic_geometric_mutate(t, ms=0.01, st_maxdepth=3):
     """Semantic geometric mutation as defined by Moraglio et al:
 
     tm = t + ms * (tr1 - tr2)
@@ -294,12 +291,11 @@ def semantic_geometric_mutate(t, ms=0.01):
     where ms is the mutation step (make it small for local search),
     and tr1 and tr2 are randomly-generated trees."""
 
-    # choosing maxdepth 2 for these trees
-    tr1 = grow(2, random)
-    tr2 = grow(2, random)
+    tr1 = grow(st_maxdepth, random)
+    tr2 = grow(st_maxdepth, random)
     return ['+', t, ['*', ms, ['-', tr1, tr2]]]
 
-def semantic_geometric_mutate_differentiate(t, fitness_fn):
+def semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth=3):
     """Semantic geometric mutation with differentiation:
 
     tm = t + ms * tr
@@ -337,7 +333,7 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn):
     # get into the while loop.
     tr_out = np.zeros(2)
     while np.mean(tr_out**2) < 0.000001:
-        tr = grow(3, random)
+        tr = grow(st_maxdepth, random)
         tr_out = fitness_fn.get_semantics(make_fn(tr))[1]
 
     t_out = fitness_fn.get_semantics(make_fn(t))[1] # should be cached already
@@ -354,14 +350,14 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn):
 
 
 def hillclimb(fitness_fn, mutation_type="optimal_ms",
-              ngens=2000, popsize=1, print_every=200):
+              ngens=2000, popsize=1, print_every=200, st_maxdepth=3):
     """Hill-climbing optimisation. """
     assert(print_every % popsize == 0)
     evals = 0
     
     print("# generation evaluations best_fitness best_test_fitness best_phenotype")
     # Generate an initial solution
-    t = grow(2, random)
+    t = grow(st_maxdepth, random)
     # Get its fitness value (ignore its semantics, even though they
     # are returned also)
     fnt = make_fn(t)
@@ -370,19 +366,18 @@ def hillclimb(fitness_fn, mutation_type="optimal_ms",
     for gen in xrange(ngens):
 
         # make a lot of new individuals by mutation
-        if mutation_type == "GSGP_optimal_ms":
+        if mutation_type == "GSGP-optimal-ms":
             # Mutate and differentiate to get the best possibility
-            s = [semantic_geometric_mutate_differentiate(t, fitness_fn)
+            s = [semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth)
                  for i in range(popsize)]
                 
         elif mutation_type == "GSGP":
             # mutation step size randomly chosen
-            s = [semantic_geometric_mutate(t, np.random.normal())
+            s = [semantic_geometric_mutate(t, np.random.normal(), st_maxdepth)
                  for i in range(popsize)]
 
         elif mutation_type == "GP":
-            # mutation step size randomly chosen
-            s = [subtree_mutate(t, np.random.normal())
+            s = [subtree_mutate(t, st_maxdepth)
                  for i in range(popsize)]
         else:
             raise ValueError("Unknown mutation type " + mutation_type)
@@ -407,4 +402,4 @@ if __name__ == "__main__":
     # srff is a symbolic regression problem -- defined at top of file.
     # you might have to run the get_data.py script first to download
     # data.
-    hillclimb(srff, "GSGP_optimal_ms", 5, 1, 1)
+    hillclimb(srff, "GSGP-optimal-ms", 5, 1, 1, 3)
