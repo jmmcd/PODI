@@ -106,18 +106,18 @@ def make_fn(t):
 
 def isatom(t):
     return (isinstance(t, str) or isinstance(t, float)
-            or isinstance(t, int))
+            or isinstance(t, int) or isinstance(t, np.float64))
 
 def traverse(t, path=None):
     """Depth-first traversal of the tree t, yielding at each step the
     node, the subtree rooted at that node, and the path. The path
     passed-in is the "path so far"."""
     if path is None: path = tuple()
-    yield t[0], t, path + (0,)
-    for i, item in enumerate(t[1:], start=1):
-        if isatom(item):
-            yield item, item, path + (i,)
-        else:
+    if isatom(t):
+        yield t, t, path
+    else:
+        yield t[0], t, path + (0,)
+        for i, item in enumerate(t[1:], start=1):
             for s in traverse(item, path + (i,)):
                 yield s
 
