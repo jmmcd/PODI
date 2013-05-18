@@ -2,10 +2,13 @@
 
 import multiprocessing
 import numpy as np
-import os
+import os, sys
 from pylab import *
 import scipy
 import scipy.stats
+
+from gp import hillclimb, srff
+from itertools import product
 
 # TODO use this style instead
 # date, rain, high, low = zip(*csv.reader(file("weather.csv")))
@@ -127,11 +130,39 @@ def print_data(rep, dist, bpdata):
     # print(r"\end{tabular}")
 
 def hill_climbing_exps():
-    from gp import hillclimb, srff
     hillclimb(srff, "GP", 5, 1, 1, 3)
     hillclimb(srff, "GSGP", 5, 1, 1, 3)
     hillclimb(srff, "GSGP-optimal-ms", 5, 1, 1, 3)
 
+
+def run1(fn, args, rep, to_file=True):
+    s = "-".join(str(arg) for arg in args) + "_rep-" + str(rep)
+    print(s)
+    if to_file:
+        save = sys.stdout
+        sys.stdout = open("LBYL/output_" + s, "w")
+    fn(*args)
+    if to_file:
+        sys.stdout = save
                 
+def LBYL_experiment():
+    try:
+        os.makedirs("LBYL")
+    except:
+        pass
+    reps = 2
+    fitness_fns = [srff]
+    mut_types = ["GP", "GSGP", "GSGP-optimal-ms"]
+    ngenss = [5]
+    popsizes = [1]
+    print_everys = [1]
+    st_maxdepthss = [2, 3]
+    for rep in range(reps):
+        print("rep ", rep)
+        p = product(fitness_fns, mut_types, ngenss,
+                    popsizes, print_everys, st_maxdepthss)
+        for setup in p:
+            run1(hillclimb, setup, rep, to_file=True)
+
 if __name__ == "__main__":
-    hill_climbing_exps()
+    LBYL_experiment()
