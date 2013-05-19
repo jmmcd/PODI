@@ -130,9 +130,9 @@ def print_data(rep, dist, bpdata):
     # print(r"\end{tabular}")
 
 def hill_climbing_exps():
-    hillclimb(srff, "GP", 5, 1, 1, 3)
-    hillclimb(srff, "GSGP", 5, 1, 1, 3)
-    hillclimb(srff, "GSGP-optimal-ms", 5, 1, 1, 3)
+    hillclimb("vladislavleva-12", "GP", 5, 1, 1, 3)
+    hillclimb("vladislavleva-12", "GSGP", 5, 1, 1, 3)
+    hillclimb("vladislavleva-12", "GSGP-optimal-ms", 5, 1, 1, 3)
 
 
 def run1(fn, args, rep, to_file=True):
@@ -151,7 +151,7 @@ def LBYL_experiment():
     except:
         pass
     reps = 2
-    fitness_fns = [srff]
+    fitness_fns = ["vladislavleva-12", "vladislavleva-14"]
     mut_types = ["GP", "GSGP", "GSGP-optimal-ms"]
     ngenss = [5]
     popsizes = [1]

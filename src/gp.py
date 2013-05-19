@@ -24,10 +24,11 @@ import bubble_down
 
 mutation_prob = 0.01
 
-# srff = fitness.benchmarks("pagie_2d")
-# srff = fitness.benchmarks("vanneschi_bioavailability")
+# srff = fitness.benchmarks("pagie-2d")
+# srff = fitness.benchmarks("vanneschi-bioavailability")
 # FIXME this stuff shouldn't be done at module level
-srff = fitness.benchmarks("evocompetitions_2010")
+# srff = fitness.benchmarks("evocompetitions-2010")
+srff = fitness.benchmarks("vladislavleva-12")
 
 # pdff_n_samples = 100
 # pdff = fitness.ProbabilityDistributionFitnessFunction(
@@ -349,10 +350,12 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth=3):
     return ['+', t, ['*', ms, tr]]
 
 
-def hillclimb(fitness_fn, mutation_type="optimal_ms",
+def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
               ngens=2000, popsize=1, print_every=200, st_maxdepth=3):
     """Hill-climbing optimisation. """
     assert(print_every % popsize == 0)
+
+    fitness_fn = fitness.benchmarks(fitness_fn_key)
     evals = 0
     
     print("# generation evaluations best_fitness best_test_fitness best_phenotype")
@@ -402,4 +405,4 @@ if __name__ == "__main__":
     # srff is a symbolic regression problem -- defined at top of file.
     # you might have to run the get_data.py script first to download
     # data.
-    hillclimb(srff, "GSGP-optimal-ms", 5, 1, 1, 3)
+    hillclimb("vladislavleva-14", "GSGP-optimal-ms", 5, 1, 1, 3)

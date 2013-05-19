@@ -584,35 +584,56 @@ def benchmarks(key):
             lambda x: x,
             {"minv": [0.0], "maxv": [1.0], "incrv": [0.1]})
     
-    elif key == "vladislavleva_12":
+    elif key == "vladislavleva-12":
         return SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: exp(-x[0]) * power(x[0], 3.0) * cos(x[0]) * sin(x[0]) \
                 * ((cos(x[0]) * power(sin(x[0]), 2.0)) - 1.0),
-            {"minv": [0.05], "maxv": [10.0], "incrv": [0.1]})
+            {"minv": [0.05], "maxv": [10.0], "incrv": [0.1]},
+            test1={"minv": [-0.5], "maxv": [10.5], "incrv": [0.05]})
 
-    elif key == "pagie_2d":
+    elif key == "vladislavleva-14":
+        return SymbolicRegressionFitnessFunction.init_from_target_fn(
+            lambda x: 10.0 / (5.0 + sum((x[i]-3)**2 for i in range(5))),
+            {"minv": [0.05]*5, "maxv": [6.05]*5, "randomx": True, "ncases": 1024},
+            test1={"minv": [-0.25]*5, "maxv": [6.35]*5, "randomx": True, "ncases": 5000})
+
+    elif key == "pagie-2d":
         return SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: (1 / (1 + x[0] ** -4) + 1 / (1 + x[1] ** -4)),
             {"minv": [-5, -5], "maxv": [5, 5], "incrv": [0.4, 0.4]})
 
-    elif key == "pagie_3d":
+    elif key == "pagie-3d":
         return SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: (1 / (1 + x[0] ** -4) + 1 / (1 + x[1] ** -4)
                        + 1 / (1 + x[2] ** -4)),
             {"minv": [-5, -5, -5], "maxv": [5, 5, 5], "incrv": [0.4, 0.4, 0.4]})
 
-    elif key == "vanneschi_bioavailability":
+    elif key == "vanneschi-bioavailability":
         return SymbolicRegressionFitnessFunction.init_from_data_file(
             "../data/bioavailability.txt", split=0.7, randomise=True)
 
-    elif key == "dow_chemical_tower":
+    elif key == "dow-chemical-tower":
         return SymbolicRegressionFitnessFunction.init_from_data_file(
             "../data/towerData.txt", split=0.7, randomise=True)
 
-    elif key == "evocompetitions_2010":
+    elif key == "evocompetitions-2010":
         return SymbolicRegressionFitnessFunction.init_from_data_file(
             "../data/evocompetitions_2010/evocompetitions_2010_train.csv",
             test_filename="../data/evocompetitions_2010/evocompetitions_2010_test.csv")
+
+    elif key == "nguyen-7":
+        return SymbolicRegressionFitnessFunction.init_from_target_fn(
+            lambda x: log(x[0] + 1) + log(x[0]**2 + 1),
+            {"minv": [0], "maxv": [2], "randomx": True, "ncases": 20})
+
+    # FIXME not sure how to implement this -- x[0] is a column,
+    # so we can't take range(x[0])... 
+    # elif key == "keijzer-6":
+    #     return SymbolicRegressionFitnessFunction.init_from_target_fn(
+    #         lambda x: sum(1.0/i for i in range(x[0])),
+    #         {"minv": [1], "maxv": [50], "incrv": [1]},
+    #         test1={"minv": [1], "maxv": [120], "incrv": [1]})
+        
 
     else:
         return "Unknown benchmark problem " + key
