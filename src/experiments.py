@@ -150,19 +150,21 @@ def LBYL_experiment():
         os.makedirs("LBYL")
     except:
         pass
-    reps = 2
-    fitness_fns = ["vladislavleva-12", "vladislavleva-14"]
+    reps = 30
+    fitness_fns = ["vladislavleva-12", "vladislavleva-14", "nguyen-7", "dow-chemical-tower", "evocompetitions-2010", "vanneschi-bioavailability", "pagie-2d"]
     mut_types = ["GP", "GSGP", "GSGP-optimal-ms"]
-    ngenss = [5]
-    popsizes = [1]
-    print_everys = [1]
+    eval_budget = 10000
+    ngenss = [10, 1000, 10000]
+    popsizes = [100, 10, 1]
+    print_everys = [100]
     st_maxdepthss = [2, 3]
     for rep in range(reps):
         print("rep ", rep)
         p = product(fitness_fns, mut_types, ngenss,
                     popsizes, print_everys, st_maxdepthss)
         for setup in p:
-            run1(hillclimb, setup, rep, to_file=True)
+            if setup[2] * setup[3] == eval_budget:
+                run1(hillclimb, setup, rep, to_file=True)
 
 if __name__ == "__main__":
     LBYL_experiment()
