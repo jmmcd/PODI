@@ -136,7 +136,7 @@ def hill_climbing_exps():
 
 
 def run1(fn, args, rep, to_file=True):
-    s = "-".join(str(arg) for arg in args) + "_rep-" + str(rep)
+    s = "_".join(str(arg) for arg in args) + "_rep-" + str(rep)
     print(s)
     if to_file:
         save = sys.stdout
@@ -154,7 +154,7 @@ def LBYL_experiment():
     fitness_fns = ["vladislavleva-12", "vladislavleva-14", "nguyen-7", "dow-chemical-tower", "evocompetitions-2010", "vanneschi-bioavailability", "pagie-2d"]
     mut_types = ["GP", "GSGP", "GSGP-optimal-ms"]
     eval_budget = 10000
-    ngenss = [10, 1000, 10000]
+    ngenss = [100, 1000, 10000]
     popsizes = [100, 10, 1]
     print_everys = [100]
     st_maxdepthss = [2, 3]
