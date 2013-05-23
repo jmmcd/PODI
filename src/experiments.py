@@ -3,12 +3,16 @@
 import multiprocessing
 import numpy as np
 import os, sys
+from datetime import datetime
 from pylab import *
 import scipy
 import scipy.stats
 
 from gp import hillclimb, srff
 from itertools import product
+
+import sys
+sys.setrecursionlimit(10000)
 
 # TODO use this style instead
 # date, rain, high, low = zip(*csv.reader(file("weather.csv")))
@@ -141,30 +145,43 @@ def run1(fn, args, rep, to_file=True):
     if to_file:
         save = sys.stdout
         sys.stdout = open("LBYL/output_" + s, "w")
+    n1 = datetime.datetime.now()
     fn(*args)
+    n2 = datetime.datetime.now()
     if to_file:
         sys.stdout = save
+    print("elapsed time %s\n" % str(n2 - n1))
                 
 def LBYL_experiment():
     try:
         os.makedirs("LBYL")
     except:
         pass
-    reps = 30
-    fitness_fns = ["vladislavleva-12", "vladislavleva-14", "nguyen-7", "dow-chemical-tower", "evocompetitions-2010", "vanneschi-bioavailability", "pagie-2d"]
+    reps = 10
+    fitness_fns = ["vladislavleva-14", "nguyen-7", "dow-chemical-tower", "evocompetitions-2010", "vanneschi-bioavailability", "pagie-2d"]
+    # fitness_fns = ["evocompetitions-2010"]
     mut_types = ["GP", "GSGP", "GSGP-optimal-ms"]
-    eval_budget = 10000
-    ngenss = [100, 1000, 10000]
-    popsizes = [100, 10, 1]
-    print_everys = [100]
-    st_maxdepthss = [2, 3]
+    # eval_budget = 1000
+    # ngenss = [1000]
+    popsizes = [10]
+    # print_everys = [1, 10, 100]
+    # st_maxdepthss = [3]
+
     for rep in range(reps):
-        print("rep ", rep)
-        p = product(fitness_fns, mut_types, ngenss,
-                    popsizes, print_everys, st_maxdepthss)
-        for setup in p:
-            if setup[2] * setup[3] == eval_budget:
-                run1(hillclimb, setup, rep, to_file=True)
+        for fitness_fn in fitness_fns:
+            for mut_type in mut_types:
+                if mut_type == "GP":
+                    eval_budget = 10000
+                elif mut_type == "GSGP":
+                    eval_budget = 10000
+                elif mut_type == "GSGP-optimal-ms":
+                    eval_budget = 1000
+                for popsize in popsizes:
+                    ngens = eval_budget / popsize
+                    print_every = eval_budget / 100
+                    st_maxdepth = 3
+                    setup = (fitness_fn, mut_type, ngens, popsize, print_every, st_maxdepth)
+                    run1(hillclimb, setup, rep, to_file=True)
 
 if __name__ == "__main__":
     LBYL_experiment()

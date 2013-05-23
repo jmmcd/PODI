@@ -430,6 +430,7 @@ class SymbolicRegressionFitnessFunction:
                 fn = eval(fn)
             except MemoryError:
                 # return default_fitness(self.maximise), None
+                # print("MemoryError in get_semantics()")
                 self.memo[s, test] = default_fitness(self.maximise), None
                 return self.memo[s, test] 
             
@@ -447,6 +448,7 @@ class SymbolicRegressionFitnessFunction:
 
         except FloatingPointError as fpe:
             # return default_fitness(self.maximise), None
+            # print("FloatingPointError in get_semantics()")
             self.memo[s, test] = default_fitness(self.maximise), None
             return self.memo[s, test] 
         except ValueError as ve:

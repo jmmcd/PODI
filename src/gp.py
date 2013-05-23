@@ -10,6 +10,7 @@ import sys
 import random
 import collections
 import copy
+import cPickle
 
 import zss
 from zss.test_tree import Node
@@ -45,9 +46,9 @@ variables = ["x" + str(i) for i in range(srff.arity)]
 # For now, RAND just gives a uniform.
 # variables = ["RAND"] # see evaluate() above
 
-constants = [0.1, 0.2, 0.3, 0.4, 0.5]
+constants = [-1.0, -0.1, 0.1, 1.0]
 variables = variables + constants
-fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "cos": 1, "square": 1}
+fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "sqrt": 1, "square": 1}
 
 # SIF is the soft-if function from: Will Smart and Mengjie Zhang,
 # Using Genetic Programming for Multiclass Classification by
@@ -63,7 +64,32 @@ def AQ(x, y):
     return x/sqrt(1.0+y*y)
 
 
+class MemoizeMutable:
+    """Based on Martelli's memoize (see fitness.py) but changed ad-hoc
+    to suit _evaluate below."""
+    def __init__(self, fn):
+        self.fn = fn
+        self.memo = {}
+    def __call__(self, *args, **kwds):
+        # A problem-specific hack
+        s = str(id(args[1])) + str(args[0])
+
+        if not self.memo.has_key(s): 
+            # print "miss"  # DEBUG INFO
+            self.memo[s] = self.fn(*args, **kwds)
+        else:
+            # print "hit"  # DEBUG INFO
+            pass
+
+        return self.memo[s]
+
+
+
 def _evaluate(t, x):
+    # FIXME re memoizing: if x was a pandas object, from which we
+    # extracted a column by name, then the object name and column name
+    # would be sufficient for memoizing purposes -- avoid the risk of
+    # using id()
     if type(t) == str:
         # it's a single string
         if t[0] == "x":
@@ -94,13 +120,14 @@ def _evaluate(t, x):
         elif t[0] == "sin": return sin(evaluate(t[1], x))
         elif t[0] == "cos": return cos(evaluate(t[1], x))
         elif t[0] == "square": return square(evaluate(t[1], x))
+        elif t[0] == "sqrt": return sqrt(evaluate(t[1], x))
         elif t[0] == "AQ": return AQ(evaluate(t[1], x), evaluate(t[2], x))
         elif t[0] == "SIF": return SIF(evaluate(t[1], x), evaluate(t[2], x), evaluate(t[3], x))
         else:
             raise ValueError("Can't interpret " + t[0])
 
-# evaluate = MemoizeMutable(_evaluate)
-evaluate = _evaluate
+evaluate = MemoizeMutable(_evaluate)
+#evaluate = _evaluate
 
 def make_fn(t):
     return lambda x: evaluate(t, x)
@@ -332,13 +359,19 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth=3):
     # Generate a tree tr and make sure it won't return all zeros,
     # which would trigger a divide-by-zero. Start with all zeros to
     # get into the while loop.
-    tr_out = np.zeros(2)
-    while np.mean(tr_out**2) < 0.000001:
+    tr_out = None
+    while (tr_out is None) or (np.mean(tr_out**2) < 0.000001):
         tr = grow(st_maxdepth, random)
-        tr_out = fitness_fn.get_semantics(make_fn(tr))[1]
+        _, tr_out = fitness_fn.get_semantics(make_fn(tr))
+        #print(s)
+        # if s_tr[1] is not None and np.sum(s_tr[1]) > 0.0000001:
+        #     tr_out = s_tr[1]
+        # else:
+        #     continue
 
-    t_out = fitness_fn.get_semantics(make_fn(t))[1] # should be cached already
+    _, t_out = fitness_fn.get_semantics(make_fn(t)) # should be cached already
     y = fitness_fn.train_y
+
     # formula from above comment
     ms = np.mean((y-t_out)*tr_out) / np.mean(tr_out**2)
 
@@ -359,13 +392,14 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
     evals = 0
     
     print("# generation evaluations best_fitness best_test_fitness best_phenotype")
-    # Generate an initial solution
-    t = grow(st_maxdepth, random)
-    # Get its fitness value (ignore its semantics, even though they
-    # are returned also)
-    fnt = make_fn(t)
-    ft, _ = fitness_fn.get_semantics(fnt)
-    
+    # Generate an initial solution and make sure it doesn't return an error
+    ft_out = None
+    while ft_out is None:
+        t = grow(st_maxdepth, random)
+        # Get its fitness value and semantics
+        fnt = make_fn(t)
+        ft, ft_out = fitness_fn.get_semantics(fnt)
+
     for gen in xrange(ngens):
 
         # make a lot of new individuals by mutation
@@ -398,11 +432,12 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
 
         evals += popsize
         if evals % print_every == 0:
-            print("%d %d %f %f : %s" % (gen, evals, 
-                                        ft, fitness_fn.test(fnt), str(t)))
+            length = iter_len(traverse(t))
+            print("%d %d %f %f %d : %s" % (gen, evals, 
+                                        ft, fitness_fn.test(fnt), length, str(t)))
         
 if __name__ == "__main__":
     # srff is a symbolic regression problem -- defined at top of file.
     # you might have to run the get_data.py script first to download
     # data.
-    hillclimb("vladislavleva-14", "GSGP-optimal-ms", 5, 1, 1, 3)
+    hillclimb("pagie-2d", "GSGP-optimal-ms", 10, 1, 1, 3)
