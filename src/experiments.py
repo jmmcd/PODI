@@ -34,7 +34,64 @@ def gp_distances_boxplots(basedir):
         ops = ["random", "mutation", "crossover"]
         process(basedir, ops, rep)
         
-    print(r"\end{tabular}")        
+    print(r"\end{tabular}")
+
+def process_hillclimb_dir(dirname):
+    fitness_fns = ["vladislavleva-12", "nguyen-7", "vanneschi-bioavailability", "pagie-2d"]
+    mut_types = ["GP", "GSGP", "GSGP-optimal-ms"]
+
+    reps = 10
+
+    for fn in fitness_fns:
+        if fn != "vanneschi-bioavailability":
+            continue
+        for mut_type in mut_types:
+            if mut_type == "GSGP-optimal-ms":
+                eval_budget = 100
+            else:
+                eval_budget = 1000
+            popsize = 10
+            print_every = 10
+            st_maxdepth = 3
+            ngens = eval_budget / popsize
+            
+
+            
+            out_fname = "_".join(map(str, ["output", fn, mut_type, ngens, popsize, print_every, st_maxdepth])) + ".pdf"
+            label = fn + ": " + mut_type
+            
+            fig = figure(figsize=(6, 4))
+            ax = fig.add_subplot(111)
+            ax.set_xlabel("Evaluations")
+            ax.set_ylabel("Training Fitness")
+            ax.set_title(label)
+
+            devals = []
+            dfitness = []
+            dtestfitness = []
+            for rep in range(reps):
+
+                fname = "_".join(map(str, ["output", fn, mut_type, ngens, popsize, print_every, st_maxdepth, "rep-"+str(rep)]))
+                print fname
+                with open("LBYL/" + fname) as openf:
+                    fevals = []
+                    ffitness = []
+                    ftestfitness = []
+                    for line in openf.read().split("\n"):
+                        if len(line) > 1 and (not line.startswith("#")):
+                            numbers, phenotype = line.split(" : ", 1)
+                            gen, evals, ft, test_ft, length = map(float, numbers.split())
+                            fevals.append(evals)
+                            ffitness.append(ft)
+                            ftestfitness.append(test_ft)
+                    devals.append(fevals)
+                    dfitness.append(ffitness)
+                    dtestfitness.append(ftestfitness)
+            mfitness = np.median(dfitness, 0)
+            print(mfitness)
+            mtestfitness = np.median(dtestfitness)
+            ax.plot(devals[0], mfitness)
+            fig.savefig("LBYL/" + out_fname)
 
 def process(basedir, ops, rep):
     data = {}
@@ -158,8 +215,8 @@ def LBYL_experiment():
     except:
         pass
     reps = 10
-    fitness_fns = ["vladislavleva-14", "nguyen-7", "dow-chemical-tower", "evocompetitions-2010", "vanneschi-bioavailability", "pagie-2d"]
-    # fitness_fns = ["evocompetitions-2010"]
+    fitness_fns = ["vladislavleva-12", "vladislavleva-14", "nguyen-7", "dow-chemical-tower", "evocompetitions-2010", "vanneschi-bioavailability", "pagie-2d"]
+    # fitness_fns = ["vladislavleva-14"]
     mut_types = ["GP", "GSGP", "GSGP-optimal-ms"]
     # eval_budget = 1000
     # ngenss = [1000]
@@ -184,4 +241,6 @@ def LBYL_experiment():
                     run1(hillclimb, setup, rep, to_file=True)
 
 if __name__ == "__main__":
-    LBYL_experiment()
+    #LBYL_experiment()
+    process_hillclimb_dir("LBYL")
+    
