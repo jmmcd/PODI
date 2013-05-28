@@ -66,6 +66,21 @@ def SIF(x, y, z):
 def AQ(x, y):
     return x/sqrt(1.0+y*y)
 
+# FIXME could make a nice protected sqrt. Are there analogous ones for
+# other operators? Somehow this is a nice manipulation of the AST to
+# avoid mistakes.
+def psqrt(x):
+    if x < 0.0:
+        return -sqrt(-x)
+    else:
+        return sqrt(x)
+
+def plog(x):
+    if x < 0.0:
+        return 0.0
+    else:
+        return log(x)
+        
 
 class MemoizeMutable:
     """Based on Martelli's memoize (see fitness.py) but changed ad-hoc
@@ -446,4 +461,4 @@ if __name__ == "__main__":
     # srff is a symbolic regression problem -- defined at top of file.
     # you might have to run the get_data.py script first to download
     # data.
-    hillclimb("pagie-2d", "GSGP-optimal-ms", 100, 10, 10, 3)
+    hillclimb("fagan", "GP", 1000, 100, 100, 4)
