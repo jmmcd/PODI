@@ -46,38 +46,6 @@ def eval_or_exec(expr):
         retval = None
     return retval
 
-class MemoizeMutable:
-    """Want to memoize the _evaluate function below. Because the tree
-    t is made of lists, ie is mutable, it can't be hashed, so the
-    usual memoization methods don't work. Instead, this class works.
-    It comes from Martelli's Cookbook [see
-    http://stackoverflow.com/questions/4669391/python-anyone-have-a-memoizing-decorator-that-can-handle-unhashable-arguments].
-    It uses cPickle to make a string, which is hashable. However, that
-    processing is slow, and it turns out to more than offset the
-    savings (even for a fairly large run).
-
-    Therefore one alternative is to try again to use tuples to
-    represent trees. However, numpy arrays are still unhashable. There
-    are also workarounds for that. But it's not clear so far that
-    memoisation will actually speed things up. Need to profile more
-    also."""
-    def __init__(self, fn):
-        self.fn = fn
-        self.memo = {}
-    def __call__(self, *args, **kwds):
-        s = cPickle.dumps(args, 1)+cPickle.dumps(kwds, 1)
-
-        # An alternative idea, a problem-specific hack
-        # s = str(args[0]) + args[1].tostring()
-        
-        if not self.memo.has_key(s): 
-            print "miss"  # DEBUG INFO
-            self.memo[s] = self.fn(*args, **kwds)
-        else:
-            print "hit"  # DEBUG INFO
-
-        return self.memo[s]
-
 def default_fitness(maximise):
     """Return default (worst) fitness, given maximization or
     minimization."""
@@ -302,6 +270,9 @@ class SymbolicRegressionFitnessFunction:
         elif defn == "correlation":
             self.maximise = False
             self.defn = self.correlation_fitness
+        elif defn == "log_error":
+            self.maximise = False
+            self.defn = self.log_error
         elif defn == "hits":
             self.maximise = True
             self.defn = self.hits_fitness
@@ -416,23 +387,16 @@ class SymbolicRegressionFitnessFunction:
         Return (default_fitness, None) on error. Pass test=True to run
         the function over the testing set instead."""
 
-        # ad-hoc memoizing
-        s = str(fn.func_closure[0].cell_contents)
-        if self.memo.has_key((s, test)):
-            # print("hit")
-            return self.memo[s, test]
-        # print("miss")
-        
         # print("s:", s)
         if not callable(fn):
             # assume fn is a string which evals to a function.
             try:
                 fn = eval(fn)
             except MemoryError:
-                # return default_fitness(self.maximise), None
+                return default_fitness(self.maximise), None
                 # print("MemoryError in get_semantics()")
-                self.memo[s, test] = default_fitness(self.maximise), None
-                return self.memo[s, test] 
+                # self.memo[s, test] = default_fitness(self.maximise), None
+                # return self.memo[s, test] 
             
         try:
             if not test:
@@ -442,15 +406,15 @@ class SymbolicRegressionFitnessFunction:
                 vals_at_cases = fn(self.test_X)
                 fit = self.defn(self.test_y, vals_at_cases)
 
-            # return fit, vals_at_cases
-            self.memo[s, test] = fit, vals_at_cases
-            return self.memo[s, test] 
+            return fit, vals_at_cases
+            # self.memo[s, test] = fit, vals_at_cases
+            # return self.memo[s, test] 
 
         except FloatingPointError as fpe:
-            # return default_fitness(self.maximise), None
+            return default_fitness(self.maximise), None
             # print("FloatingPointError in get_semantics()")
-            self.memo[s, test] = default_fitness(self.maximise), None
-            return self.memo[s, test] 
+            # self.memo[s, test] = default_fitness(self.maximise), None
+            # return self.memo[s, test] 
         except ValueError as ve:
             print("ValueError: " + str(ve) +':' + str(fn))
             raise
@@ -481,6 +445,11 @@ class SymbolicRegressionFitnessFunction:
         m = np.mean(m)
         m = np.sqrt(m)
         return m
+
+    @staticmethod
+    def log_error(x, y):
+        """Calculate log error between x and y, two numpy arrays."""
+        return 1.0 * np.mean(np.log(1.0+(np.abs(x-y))))
 
     @staticmethod
     def hits_fitness(x, y):
@@ -627,6 +596,11 @@ def benchmarks(key):
         return SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: log(x[0] + 1) + log(x[0]**2 + 1),
             {"minv": [0], "maxv": [2], "randomx": True, "ncases": 20})
+
+    elif key == "fagan":
+        return SymbolicRegressionFitnessFunction.init_from_target_fn(
+            lambda x: x[0]**4 + x[1]**2,
+            {"minv": [-1, -1], "maxv": [1, 1], "incrv": [0.1, 0.1]})
 
     # FIXME not sure how to implement this -- x[0] is a column,
     # so we can't take range(x[0])... 

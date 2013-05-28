@@ -11,6 +11,9 @@ import random
 import collections
 import copy
 import cPickle
+from hashlib import sha1
+import sys
+sys.setrecursionlimit(10000)
 
 import zss
 from zss.test_tree import Node
@@ -71,9 +74,11 @@ class MemoizeMutable:
         self.fn = fn
         self.memo = {}
     def __call__(self, *args, **kwds):
-        # A problem-specific hack
-        s = str(id(args[1])) + str(args[0])
-
+        # A problem-specific hack: args[1] is the numpy array, and
+        # args[0] is the tree.
+        s = sha1(args[1]).hexdigest() + sha1(str(args[0])).hexdigest()
+        # s = str(tuple(args[1].T[0])) + str(args[0])
+        # print s
         if not self.memo.has_key(s): 
             # print "miss"  # DEBUG INFO
             self.memo[s] = self.fn(*args, **kwds)
@@ -88,8 +93,9 @@ class MemoizeMutable:
 def _evaluate(t, x):
     # FIXME re memoizing: if x was a pandas object, from which we
     # extracted a column by name, then the object name and column name
-    # would be sufficient for memoizing purposes -- avoid the risk of
-    # using id()
+    # would be sufficient for memoizing purposes, and faster. But
+    # danger when doing multiple runs -- column could be
+    # randomly-generated in some circumstances...
     if type(t) == str:
         # it's a single string
         if t[0] == "x":
@@ -123,8 +129,8 @@ def _evaluate(t, x):
         elif t[0] == "sqrt": return sqrt(evaluate(t[1], x))
         elif t[0] == "AQ": return AQ(evaluate(t[1], x), evaluate(t[2], x))
         elif t[0] == "SIF": return SIF(evaluate(t[1], x), evaluate(t[2], x), evaluate(t[3], x))
-        else:
-            raise ValueError("Can't interpret " + t[0])
+
+    raise ValueError("Can't interpret " + t[0])
 
 evaluate = MemoizeMutable(_evaluate)
 #evaluate = _evaluate
@@ -440,4 +446,4 @@ if __name__ == "__main__":
     # srff is a symbolic regression problem -- defined at top of file.
     # you might have to run the get_data.py script first to download
     # data.
-    hillclimb("pagie-2d", "GSGP-optimal-ms", 10, 1, 1, 3)
+    hillclimb("pagie-2d", "GSGP-optimal-ms", 100, 10, 10, 3)
