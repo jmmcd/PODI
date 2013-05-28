@@ -84,7 +84,7 @@ def bubble_down(n, rng):
     optimisation."""
 
     if n <= 1:
-        return [rng.choice(gp.variables)]
+        return [rng.choice(gp.leaves)]
     t = mkst(rng)
     node_cnt = len(t)
     max_depth = 0
@@ -116,11 +116,11 @@ def bubble_down(n, rng):
     # note max depth gets +1 because we have yet to add leaves.
     return add_leaves_remove_annotations(t, rng), node_cnt, max_depth+1
 
-def add_leaves_remove_annotations(t, rng):
+def add_leaves_remove_annotations(t, rng, with_replacement=True):
     result = [t[0][0]] # first [0] gets node, second [0] gets label
     for item in t[1:]:
         if item is None:
-            result.append(rng.choice(gp.variables)) # fill in a leaf
+            result.append(rng.choice(gp.leaves)) # fill in a leaf
         else:
             result.append(add_leaves_remove_annotations(item, rng))
     return result

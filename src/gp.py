@@ -50,7 +50,7 @@ variables = ["x" + str(i) for i in range(srff.arity)]
 # variables = ["RAND"] # see evaluate() above
 
 constants = [-1.0, -0.1, 0.1, 1.0]
-variables = variables + constants
+leaves = variables + constants
 fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "sqrt": 1, "square": 1}
 
 # SIF is the soft-if function from: Will Smart and Mengjie Zhang,
@@ -217,7 +217,7 @@ def depth(path):
 def grow(st_maxdepth, rng):
     pTerminal = 0.2 # FIXME not sure where/how to parameterise this
     if st_maxdepth == 0 or rng.random() < pTerminal:
-        return rng.choice(variables)
+        return rng.choice(leaves)
     else:
         nd = rng.choice(fns.keys())
         return [nd] + [grow(st_maxdepth-1, rng) for i in range(fns[nd])]
@@ -326,7 +326,7 @@ def point_mutate(t, p=mutation_prob):
             else:
                 # this node is a terminal
                 arity = 0
-                options = [term for term in variables if term != nd]
+                options = [term for term in leaves if term != nd]
                 if options:
                     place_subtree_at_path(t, path, random.choice(options))
     return t
