@@ -258,7 +258,7 @@ class SymbolicRegressionFitnessFunction:
     cases."""
 
     def __init__(self, train_X, train_y, test_X=None, test_y=None,
-                 defn="rmse", name="SRFF"):
+                 defn="rmse"):
         self.train_X = train_X
         self.train_y = train_y
         self.test_X = test_X
@@ -278,13 +278,11 @@ class SymbolicRegressionFitnessFunction:
             self.defn = self.hits_fitness
         else:
             raise ValueError("Bad value for fitness definition: " + defn)
-        self.name = name
-        self.memo = {}
 
     @classmethod
     def init_from_data_file(cls, filename, test_filename=None,
                             split=0.9,
-                            randomise=False, defn="rmse", name=None):
+                            randomise=False, defn="rmse"):
         """Construct an SRFF by reading training data from a file. If
         a test_filename is given, get test data there. Else split the
         data according to split, eg 0.9 means 90% for training, 10%
@@ -293,9 +291,6 @@ class SymbolicRegressionFitnessFunction:
         correctly, else genfromtxt assumes it is whitespace-separated.
         # character is used for comment lines."""
 
-        if name is None:
-            name = os.path.basename(filename)
-        
         if filename.endswith(".csv"):
             delimiter = ","
         else:
@@ -332,10 +327,10 @@ class SymbolicRegressionFitnessFunction:
         assert len(train_X[0]) == len(train_y)
         assert len(test_X[0]) == len(test_y)
         return SymbolicRegressionFitnessFunction(train_X, train_y,
-                                                 test_X, test_y, defn, name)
+                                                 test_X, test_y, defn)
 
     @classmethod
-    def init_from_target_fn(cls, target, train, test1=None, test2=None, defn="rmse", name="SRFF"):
+    def init_from_target_fn(cls, target, train, test1=None, test2=None, defn="rmse"):
         """Pass in a target function and parameters for building the
         fitness cases for input variables for training and for testing
         if necessary. The cases are specified as a dictionary
@@ -370,16 +365,13 @@ class SymbolicRegressionFitnessFunction:
             testing_values = values
         return SymbolicRegressionFitnessFunction(cases, values,
                                                  testing_cases,
-                                                 testing_values, defn, name)
+                                                 testing_values, defn)
 
 
     def __call__(self, fn):
         """Allow objects of this type to be called as if they were
         functions. Return just a fitness value."""
         return self.get_semantics(fn)[0]
-
-    def __str__(self):
-        return self.name
 
     def get_semantics(self, fn, test=False):
         """Run the function over the training set. Return the fitness
@@ -600,7 +592,8 @@ def benchmarks(key):
     elif key == "fagan":
         return SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: x[0]**4 + x[1]**2,
-            {"minv": [-1, -1], "maxv": [1, 1], "incrv": [0.1, 0.1]})
+            {"minv": [-5, -5], "maxv": [5, 5], "incrv": [0.4, 0.4]},
+            defn="log_error")
 
     # FIXME not sure how to implement this -- x[0] is a column,
     # so we can't take range(x[0])... 

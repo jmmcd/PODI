@@ -28,30 +28,31 @@ import bubble_down
 
 mutation_prob = 0.01
 
-# srff = fitness.benchmarks("pagie-2d")
-# srff = fitness.benchmarks("vanneschi-bioavailability")
-# FIXME this stuff shouldn't be done at module level
-# srff = fitness.benchmarks("evocompetitions-2010")
-srff = fitness.benchmarks("vladislavleva-12")
-
 # pdff_n_samples = 100
 # pdff = fitness.ProbabilityDistributionFitnessFunction(
 #     np.linspace(0.0, 1.0, pdff_n_samples), pdff_n_samples)
 
-# variables = ["x", "y"]
-variables = ["x" + str(i) for i in range(srff.arity)]
 
-# consider allowing all the distributions here
-# [http://docs.scipy.org/doc/numpy/reference/routines.random.html] as
-# primitives in the pdff. Consider at least normal, Poisson, beta,
-# uniform, exponential, lognormal, weibull.
+def set_fns_leaves(nvars):
+    global fns
+    global leaves
+    
+    variables = ["x" + str(i) for i in range(nvars)]
 
-# For now, RAND just gives a uniform.
-# variables = ["RAND"] # see evaluate() above
+    # consider allowing all the distributions here
+    # [http://docs.scipy.org/doc/numpy/reference/routines.random.html] as
+    # primitives in the pdff. Consider at least normal, Poisson, beta,
+    # uniform, exponential, lognormal, weibull.
 
-constants = [-1.0, -0.1, 0.1, 1.0]
-leaves = variables + constants
-fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "sqrt": 1, "square": 1}
+    # For now, RAND just gives a uniform.
+    # variables = ["RAND"] # see evaluate() above
+
+    constants = [-1.0, -0.1, 0.1, 1.0]
+    leaves = variables + constants
+    fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "sqrt": 1, "square": 1}
+
+fns = {}
+leaves = []
 
 # SIF is the soft-if function from: Will Smart and Mengjie Zhang,
 # Using Genetic Programming for Multiclass Classification by
@@ -410,6 +411,7 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
     assert(print_every % popsize == 0)
 
     fitness_fn = fitness.benchmarks(fitness_fn_key)
+    set_fns_leaves(fitness_fn.arity)        
     evals = 0
     
     print("# generation evaluations best_fitness best_test_fitness best_phenotype")
@@ -458,7 +460,4 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
                                         ft, fitness_fn.test(fnt), length, str(t)))
         
 if __name__ == "__main__":
-    # srff is a symbolic regression problem -- defined at top of file.
-    # you might have to run the get_data.py script first to download
-    # data.
     hillclimb("fagan", "GP", 1000, 100, 100, 4)

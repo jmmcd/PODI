@@ -151,7 +151,7 @@ def study_structure(basename, rep="bubble_down"):
     structure.MAXLEN = 100
     structure.SEMANTIC_DISTANCE = semantic_distance
     structure.PHENOTYPE_DISTANCE = tree_distance
-    structure.FITNESS = gp.srff
+    structure.FITNESS = fitness.benchmarks("pagie-2d") # hardcoded
     structure.CROSSOVER_PROB = 1.0
     structure.MAXV = sys.maxint
     structure.WRAPS = 0
@@ -235,7 +235,9 @@ def test_bubble_down():
         for i in range(15):
             b = bubble_down(i, random)
 
-def run(fitness_fn, rep="bubble_down"):
+def run(fitness_fn_key, rep="bubble_down"):
+    fitness_fn = fitness.benchmarks(fitness_fn_key)
+    gp.set_fns_leaves(fitness_fn.arity)
     variga.MINLEN = 100
     variga.MAXLEN = 100
     variga.PHENOTYPE_DISTANCE = gp.tree_distance
@@ -249,7 +251,7 @@ def run(fitness_fn, rep="bubble_down"):
     variga.MAXIMISE = False
     variga.SUCCESS = success
     variga.POPSIZE = 1000
-    variga.GENERATIONS = 10
+    variga.GENERATIONS = 100
     variga.PMUT = 0.01
     variga.CROSSOVER_PROB = 0.7
     variga.ELITE = 1
@@ -272,9 +274,9 @@ if __name__ == "__main__":
     elif sys.argv[1] == "bubble_down_structure":
         study_structure(sys.argv[2], "bubble_down")
     elif sys.argv[1] == "run_bubble_down":
-        run(gp.srff, "bubble_down")
+        run(sys.argv[2], "bubble_down")
     elif sys.argv[1] == "run_grow":
-        run(gp.srff, "grow")
+        run(sys.argv[2], "grow")
     elif sys.argv[1] == "run_bubble_down_prob":
         run(gp.pdff, "bubble_down")
     elif sys.argv[1] == "run_grow_prob":
