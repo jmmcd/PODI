@@ -412,7 +412,7 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth=3):
 
 
 def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
-              ngens=2000, popsize=1, print_every=200, st_maxdepth=3):
+              ngens=2000, popsize=1, print_every=200, st_maxdepth=3, init_popsize=1):
     """Hill-climbing optimisation. """
     assert(print_every % popsize == 0)
 
@@ -421,14 +421,21 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
     evals = 0
     
     print("# generation evaluations best_fitness best_test_fitness best_phenotype")
-    # Generate an initial solution and make sure it doesn't return an error
-    ft_out = None
-    while ft_out is None:
-        t = grow(st_maxdepth, random)
-        # Get its fitness value and semantics
-        fnt = make_fn(t)
-        ft, ft_out = fitness_fn.get_semantics(fnt)
+    # Generate an initial solution and make sure it doesn't return an
+    # error because if it does, in GSGP that error will always be present.
+    si_out = None
+    ft = float(sys.maxint)
+    while si_out is None:
+        s = [grow(st_maxdepth, random) for i in range(init_popsize)]
+        for si in s:
+            # Evaluate child
+            fnsi = make_fn(si)
+            fsi, si_out = fitness_fn.get_semantics(fnsi)
 
+            # Keep the child only if better
+            if fsi < ft:
+                t, ft, fnt = si, fsi, fnsi
+        
     for gen in xrange(ngens):
 
         # make a lot of new individuals by mutation
@@ -453,7 +460,7 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
         for si in s:
             # Evaluate child
             fnsi = make_fn(si)
-            fsi, _ = fitness_fn.get_semantics(fnsi)
+            fsi, si_out = fitness_fn.get_semantics(fnsi)
 
             # Keep the child only if better
             if fsi < ft:
@@ -466,4 +473,4 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
                                         ft, fitness_fn.test(fnt), length, str(t)))
         
 if __name__ == "__main__":
-    hillclimb("fagan", "GSGP", 1000, 100, 100, 4)
+    hillclimb("fagan", "GP", 1000, 100, 100, 3, 100)
