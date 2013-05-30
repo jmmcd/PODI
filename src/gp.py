@@ -333,15 +333,21 @@ def point_mutate(t, p=mutation_prob):
     return t
             
             
-def semantic_geometric_mutate(t, ms=0.01, st_maxdepth=3):
+def semantic_geometric_mutate(t, ms=0.01, st_maxdepth=3, one_tree=False):
     """Semantic geometric mutation as defined by Moraglio et al:
 
     tm = t + ms * (tr1 - tr2)
     
     where ms is the mutation step (make it small for local search),
-    and tr1 and tr2 are randomly-generated trees."""
+    and tr1 and tr2 are randomly-generated trees.
+
+    Set one_tree=True to use tm = t + ms * tr1. Make sure ms is
+    symmetric about zero in that case.
+    """
 
     tr1 = grow(st_maxdepth, random)
+    if one_tree:
+        return ['+', t, ['*', ms, tr1]]
     tr2 = grow(st_maxdepth, random)
     return ['+', t, ['*', ms, ['-', tr1, tr2]]]
 
@@ -433,7 +439,7 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
                 
         elif mutation_type == "GSGP":
             # mutation step size randomly chosen
-            s = [semantic_geometric_mutate(t, np.random.normal(), st_maxdepth)
+            s = [semantic_geometric_mutate(t, np.random.normal(), st_maxdepth, one_tree=False)
                  for i in range(popsize)]
 
         elif mutation_type == "GP":
@@ -460,4 +466,4 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
                                         ft, fitness_fn.test(fnt), length, str(t)))
         
 if __name__ == "__main__":
-    hillclimb("fagan", "GP", 1000, 100, 100, 4)
+    hillclimb("fagan", "GSGP", 1000, 100, 100, 4)
