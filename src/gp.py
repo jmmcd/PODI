@@ -435,6 +435,7 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
             # Keep the child only if better
             if fsi < ft:
                 t, ft, fnt = si, fsi, fnsi
+        evals += init_popsize
         
     for gen in xrange(ngens):
 
