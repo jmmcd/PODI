@@ -27,7 +27,7 @@ import structure
 import fitness
 import variga
 from bubble_down import generate_bubble_down_tree_and_fn, generate_grow_tree_and_fn, generate_bubble_down_tree_and_fn_minn_maxn, generate_grow_tree_and_fn_maxd
-from gp import srff, tree_distance
+import gp
 
 def LCCB_coevo(fitness_fn, pop):
     y = fitness_fn.train_y
@@ -80,7 +80,7 @@ def LCCB_coevo(fitness_fn, pop):
 def run(fitness_fn, rep="bubble_down"):
     variga.MINLEN = 100
     variga.MAXLEN = 100
-    variga.PHENOTYPE_DISTANCE = tree_distance
+    variga.PHENOTYPE_DISTANCE = gp.tree_distance
     # run the fitness function as normal to get individuals' semantics
     variga.FITNESS = fitness_fn
     # but overwrite the individuals' fitness values
@@ -104,4 +104,6 @@ def run(fitness_fn, rep="bubble_down"):
 
 
 if __name__ == "__main__":
+    srff = fitness.benchmarks("pagie-2d")
+    gp.set_fns_leaves(srff.arity)
     run(srff)

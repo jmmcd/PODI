@@ -71,10 +71,12 @@ def traverse(t, path=None):
 
 if __name__ == "__main__":
     grammar = Grammar("grammars/symbolic_regression_2d.bnf")
-    srff = fitness.benchmarks("pagie_2d")
+    srff = fitness.benchmarks("pagie-2d")
     MAX_CODON = 127
     def generate(random):
-        return random_str_mod(random, grammar)
+        # return readable_phenotype, phenotype
+        p = random_str_mod(random, grammar)
+        return p, p
     def success(err):
         return False # let's just keep running so all runs are same length
     variga.GENERATE = generate

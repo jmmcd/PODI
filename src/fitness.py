@@ -605,7 +605,7 @@ def benchmarks(key):
         
 
     else:
-        return "Unknown benchmark problem " + key
+        print "Unknown benchmark problem " + key
 
     
 if __name__ == "__main__":

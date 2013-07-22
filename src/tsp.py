@@ -60,11 +60,8 @@ class TSP:
     def perm(self, random):
         s = range(1, self.n+1)
         random.shuffle(s)
-        return s
-
-    def tour_length(self, tour):
-        return sum(self.dist(*pair)
-                   for pair in overlapping_pairs(tour) + [[tour[-1], tour[0]]])
+        # return readable_phenotype, phenotype
+        return s, s
 
     def success(self, fitness):
         return self.optimal >= fitness
@@ -72,13 +69,25 @@ class TSP:
     def dist(self, x, y):
         return euclidean_distance(self.coords[x], self.coords[y])
 
+class fitness:
+    def __init__(self, instance):
+        self.instance = instance
+    def __call__(self, x):
+        return self.get_semantics(x)[0]
+    def test(self, x):
+        return self(x)
+    def get_semantics(self, tour):
+        length = sum(self.instance.dist(*pair)
+                     for pair in overlapping_pairs(tour) + [[tour[-1], tour[0]]])
+        return length, tour
+
 if __name__ == "__main__":
     problem = TSP("../data/TSPLIB/att48.tsp.gz")
     # tour = problem.perm(random)
     # print(tour)
     # print(problem.tour_length(tour))
     variga.GENERATE = problem.perm
-    variga.FITNESS = problem.tour_length
+    variga.FITNESS = fitness(problem)
     variga.SUCCESS = problem.success
     variga.MAXIMISE = False
     variga.MINLEN = 200

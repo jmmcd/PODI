@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# this is just some beginnings... not integrate with the GA or PODI itself.
+
+import random
 import bubble_down
 
 vars = list("x")
@@ -28,4 +31,4 @@ class Lid:
         return metric_depth + metric_terminals
 
 lid = Lid(10)
-print(lid(bubble_down.bubble_down(25)))
+print(lid(bubble_down.bubble_down(25, random)))
