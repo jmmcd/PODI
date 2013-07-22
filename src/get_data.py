@@ -29,12 +29,12 @@ def pull_file(url):
 
 def main():
     urls = [
-        # "http://kdbio.inesc-id.pt/~sara/gptp2013/bioavailability.txt",
-        # "http://kdbio.inesc-id.pt/~sara/gptp2013/bioavailability_lookup.txt",
-        # "http://kdbio.inesc-id.pt/~sara/gptp2013/toxicity.txt",
-        # "http://kdbio.inesc-id.pt/~sara/gptp2013/ppb.txt",
-        # "http://www.iwr.uni-heidelberg.de/groups/comopt/software/TSPLIB95/tsp/ALL_tsp.tar.gz",
-        # "http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/STSP.html",
+        "http://kdbio.inesc-id.pt/~sara/gptp2013/bioavailability.txt",
+        "http://kdbio.inesc-id.pt/~sara/gptp2013/bioavailability_lookup.txt",
+        "http://kdbio.inesc-id.pt/~sara/gptp2013/toxicity.txt",
+        "http://kdbio.inesc-id.pt/~sara/gptp2013/ppb.txt",
+        "http://www.iwr.uni-heidelberg.de/groups/comopt/software/TSPLIB95/tsp/ALL_tsp.tar.gz",
+        "http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/STSP.html",
         # TODO download all the Hamiltonian cycle probems,
         # capacitated arc-routing problems, etc from the same
         # source as TSPLIB
@@ -52,9 +52,9 @@ def main():
         os.makedirs("TSPLIB")
     except OSError:
         pass
-    # os.rename("ALL_tsp.tar.gz", "TSPLIB/ALL_tsp.tar.gz")
-    # os.system("cd TSPLIB; tar xzf ALL_tsp.tar.gz")
-    # os.rename("STSP.html", "TSPLIB/STSP.html")
+    os.rename("ALL_tsp.tar.gz", "TSPLIB/ALL_tsp.tar.gz")
+    os.system("cd TSPLIB; tar xzf ALL_tsp.tar.gz")
+    os.rename("STSP.html", "TSPLIB/STSP.html")
     os.system("unzip EmulatorProblem.zip")
     os.remove("__MACOSX/EmulatorProblem/._EmpiricalEmulators.pdf")
     os.removedirs("__MACOSX/EmulatorProblem")
