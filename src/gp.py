@@ -450,6 +450,11 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
             s = [semantic_geometric_mutate(t, np.random.normal(), st_maxdepth, one_tree=False)
                  for i in range(popsize)]
 
+        elif mutation_type == "GSGP-one-tree":
+            # mutation step size randomly chosen
+            s = [semantic_geometric_mutate(t, np.random.normal(), st_maxdepth, one_tree=True)
+                 for i in range(popsize)]
+            
         elif mutation_type == "GP":
             s = [subtree_mutate(t, st_maxdepth)
                  for i in range(popsize)]
@@ -474,4 +479,4 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
                                         ft, fitness_fn.test(fnt), length, str(t)))
         
 if __name__ == "__main__":
-    hillclimb("fagan", "GP", 1000, 100, 100, 3, 100)
+    hillclimb("GOLD1h", "GSGP-one-tree", 200, 100, 100, 3, 100)

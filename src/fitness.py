@@ -595,6 +595,11 @@ def benchmarks(key):
             {"minv": [-5, -5], "maxv": [5, 5], "incrv": [0.4, 0.4]},
             defn="log_error")
 
+    elif key in ["GOLD1h", "GOLD5m", "GU1h", "GU5m", "SP5001h", "SP5005m"]:
+        return SymbolicRegressionFitnessFunction.init_from_data_file(
+            "../data/finance/" + key + "_gsgp.dat", split=0.7)
+            
+
     # FIXME not sure how to implement this -- x[0] is a column,
     # so we can't take range(x[0])... 
     # elif key == "keijzer-6":
