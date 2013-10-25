@@ -255,7 +255,8 @@ class SymbolicRegressionFitnessFunction:
     (http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html).
     The reason is that the function needs some extra data to go with
     it: an arity, a list of bounds and increments to create the test
-    cases."""
+    cases. Actually there are lots of bits and pieces and it's best to
+    keep them together."""
 
     def __init__(self, train_X, train_y, test_X=None, test_y=None,
                  defn="rmse"):
@@ -276,6 +277,9 @@ class SymbolicRegressionFitnessFunction:
         elif defn == "hits":
             self.maximise = True
             self.defn = self.hits_fitness
+        elif defn == "trading":
+            self.maximise = True
+            self.defn = self.trading_fitness
         else:
             raise ValueError("Bad value for fitness definition: " + defn)
 
@@ -429,39 +433,47 @@ class SymbolicRegressionFitnessFunction:
             return SymbolicRegressionFitnessFunction.build_mesh(minv, maxv, incrv)
 
     @staticmethod
-    def rmse(x, y):
-        """Calculate root mean square error between x and y, two numpy
+    def rmse(y, yhat):
+        """Calculate root mean square error between yhat and y, two numpy
         arrays."""
-        m = x - y
+        m = yhat - y
         m = np.square(m)
         m = np.mean(m)
         m = np.sqrt(m)
         return m
 
     @staticmethod
-    def log_error(x, y):
-        """Calculate log error between x and y, two numpy arrays."""
-        return 1.0 * np.mean(np.log(1.0+(np.abs(x-y))))
+    def log_error(y, yhat):
+        """Calculate log error between yhat and y, two numpy arrays."""
+        return 1.0 * np.mean(np.log(1.0+(np.abs(yhat-y))))
 
     @staticmethod
-    def hits_fitness(x, y):
+    def hits_fitness(y, yhat):
         """Hits as fitness: how many of the errors are very small?
         Minimise 1 - the proportion."""
-        errors = abs(x - y)
+        errors = abs(yhat - y)
         return 1 - np.mean(errors < 0.01)
 
     @staticmethod
-    def correlation_fitness(x, y):
+    def correlation_fitness(y, yhat):
         """Correlation coefficient as fitness: minimise 1 - R^2."""
         try:
             # use [0][1] to get the right element from corr matrix
-            corr = abs(np.corrcoef(x, y)[0][1])
+            corr = abs(np.corrcoef(yhat, y)[0][1])
         except (ValueError, FloatingPointError):
-            # ValueError raised when x is a scalar because individual does
+            # ValueError raised when yhat is a scalar because individual does
             # not depend on input. FloatingPointError raised when elements
-            # of x are all identical.
+            # of yhat are all identical.
             corr = 0.0
         return 1.0 - corr * corr
+
+    @staticmethod
+    def trading_fitness(y, yhat):
+        """At each time-step (ie data point), we either buy or short
+        based on whether our predicted return yhat is positive or
+        negative. If we buy, we gain the true return y (which could be
+        negative). If we short, we gain minus the true return y."""
+        return np.sum(np.sign(yhat) * y)
 
     @staticmethod
     def build_random_cases(minv, maxv, n):
