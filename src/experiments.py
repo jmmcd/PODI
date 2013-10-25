@@ -4,15 +4,16 @@ import multiprocessing
 import numpy as np
 import os, sys
 from datetime import datetime
-from pylab import *
+from itertools import product
+# from pylab import *
 import scipy
 import scipy.stats
 
-from gp import hillclimb
-from itertools import product
+from gp import hillclimb, make_fn
+import fitness
 
-# import sys
-# sys.setrecursionlimit(10000)
+import sys
+sys.setrecursionlimit(100000)
 
 # TODO use this style instead
 # date, rain, high, low = zip(*csv.reader(file("weather.csv")))
@@ -189,13 +190,17 @@ def print_data(rep, dist, bpdata):
     #         cmean, cstddev, cps, cmedian))
     # print(r"\end{tabular}")
 
-def hill_climbing_exps():
-    hillclimb("vladislavleva-12", "GP", 5, 1, 1, 3)
-    hillclimb("vladislavleva-12", "GSGP", 5, 1, 1, 3)
-    hillclimb("vladislavleva-12", "GSGP-optimal-ms", 5, 1, 1, 3)
+def get_accumulated_returns(ind_s, key):
+    """Given an individual and fitness function, calculate its
+    accumulated return."""
+    ind = make_fn(fitness.eval_or_exec(ind_s))
+    srff = fitness.SymbolicRegressionFitnessFunction.init_from_data_file(
+        "../data/finance/" + key + "_gsgp.dat", split=0.7, defn="trading")
+    return srff.test(ind)
 
-
+    
 def run1(fn, args, rep, to_file=True):
+    """Unused for now."""
     s = "_".join(str(arg) for arg in args) + "_rep-" + str(rep)
     print(s)
     if to_file:
@@ -208,48 +213,81 @@ def run1(fn, args, rep, to_file=True):
         sys.stdout = save
     print("elapsed time %s\n" % str(n2 - n1))
                 
-def LBYL_experiment():
-    try:
-        os.makedirs("LBYL")
-    except:
-        pass
-    reps = 10
-    fitness_fns = ["vladislavleva-12", "vladislavleva-14", "nguyen-7", "dow-chemical-tower", "evocompetitions-2010", "vanneschi-bioavailability", "pagie-2d"]
-    # fitness_fns = ["vladislavleva-14"]
-    mut_types = ["GP", "GSGP", "GSGP-optimal-ms"]
-    # eval_budget = 1000
-    # fitness_fns = ["pagie-2d", "vladislavleva-14", "nguyen-7", "dow-chemical-tower", "evocompetitions-2010", "vanneschi-bioavailability"]
-    fitness_fns = ["evocompetitions-2010"]
-    fitness_fns = ["pagie-2d"]
-    fitness_fns = ["nguyen-7"]
-    fitness_fns = ["vladislavleva-12"]
-    fitness_fns = ["vladislavleva-14"]
-    fitness_fns = ["dow-chemical-tower"]
-    fitness_fns = ["vanneschi-bioavailability"]
-    mut_types = ["GSGP-optimal-ms", "GP", "GSGP"]
-    _eval_budget = 1000
-    # ngenss = [1000]
-    popsizes = [10]
-    # print_everys = [1, 10, 100]
-    # st_maxdepthss = [3]
+def LBYL_experiment(run=True):
+    reps = range(10)
+    # fitness_fns = ["vladislavleva-12", "vladislavleva-14",
+                     # "nguyen-7", "dow-chemical-tower",
+                     # "evocompetitions-2010",
+                     # "vanneschi-bioavailability", "pagie-2d"]
+    fitness_fns = ["GOLD5m", "GOLD1h", "GU5m", "GU1h", "SP5005m", "SP5001h"]
+    mutation_types = ["GP", "GSGP", "GSGP-one-tree", "GSGP-optimal-ms"]
+    eval_budget = 10000
+    st_maxdepths = [3]
+    popsizes = [1, 10, 100]
+    init_popsizes = [1, 10, 100]
+    print_every = 1
 
-    for rep in range(reps):
-        for fitness_fn in fitness_fns:
-            for mut_type in mut_types:
-                if mut_type == "GP":
-                    eval_budget = _eval_budget
-                elif mut_type == "GSGP":
-                    eval_budget = _eval_budget
-                elif mut_type == "GSGP-optimal-ms":
-                    eval_budget = _eval_budget / 10
-                for popsize in popsizes:
-                    ngens = eval_budget / popsize
-                    print_every = 10
-                    st_maxdepth = 3
-                    setup = (fitness_fn, mut_type, ngens, popsize, print_every, st_maxdepth)
-                    run1(hillclimb, setup, rep, to_file=True)
+    if not run:
+        results = np.zeros((len(fitness_fns),
+                            len(mutation_types),
+                            len(st_maxdepths),
+                            len(popsizes),
+                            len(init_popsizes),
+                            len(reps)))
+
+    p = product(fitness_fns, mutation_types, st_maxdepths, 
+                popsizes, init_popsizes, reps)
+
+    for item in p:
+        (fitness_fn, mutation_type, st_maxdepth, 
+         popsize, init_popsize, rep) = item
+        print item
+        filename = "/Users/jmmcd/Documents/results/GSGP_finance/" + "_".join(map(str, item)) + ".dat"
+        if "GSGP" in mutation_type:
+            eval_budget /= 10
+        ngens = int((eval_budget - init_popsize) / float(popsize))
+
+        if run:
+                           
+            cmd = "python gp.py %s %s %d %d %d %d %d " % (
+                fitness_fn, mutation_type, st_maxdepth,
+                ngens, popsize, init_popsize, print_every)
+            redirect = " > " + filename
+            # run this as a system command, redirecting output to a file,
+            # because it avoids danger of leaking memory if everything is
+            # inside a single big process
+            os.system(cmd + redirect)
+        else:
+            # process the result: get the outcomes, put them into a 6D
+            # matrix
+
+            numbers, phenotype = open(filename).readlines()[-1].split(":")
+            numbers = map(float, numbers.split())
+            print phenotype
+            
+            if "GOLD" in fitness_fn or "GU" in fitness_fn or "SP500" in fitness_fn:
+                # accumulated returns on test data
+                r = get_accumulated_returns(phenotype, fitness_fn)
+            else:
+                # MSE or whatever on test data
+                r = numbers[3]
+                
+            idx = (fitness_fns.index(fitness_fn),
+                   mutation_types.index(mutation_type),
+                   st_maxdepths.index(st_maxdepth),
+                   popsizes.index(popsize),
+                   init_popsizes.index(init_popsize),
+                   rep)
+            results[idx] = r
+
+    if not run:
+        print results
+
 
 if __name__ == "__main__":
-    #LBYL_experiment()
-    process_hillclimb_dir("LBYL")
+    LBYL_experiment(run=True)
+    # process_hillclimb_dir("LBYL")
+    # s = "['*', ['+', -0.1, ['+', ['+', ['/', ['*', ['+', ['sin', 'x0'], ['square', 'x0']], ['+', 1.0, ['sqrt', 1.0]]], ['+', -1.0, 'x6']], ['+', ['+', 'x7', 'x3'], ['-', 'x6', 'x0']]], ['sqrt', ['square', 'x5']]]], ['+', ['square', ['/', 'x0', -0.1]], ['*', 'x0', 1.0]]]"
+    # k = "GOLD5m"
+    # print evaluate_finance_individual(s, k)
     
