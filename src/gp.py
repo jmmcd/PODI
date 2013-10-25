@@ -10,6 +10,7 @@ import sys
 import random
 import collections
 import copy
+import itertools
 import cPickle
 from hashlib import sha1
 import sys
@@ -50,7 +51,7 @@ def set_fns_leaves(nvars):
     constants = [-1.0, -0.1, 0.1, 1.0]
     leaves = variables + constants
     fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "sqrt": 1, "square": 1}
-
+    
 fns = {}
 leaves = []
 
@@ -414,7 +415,6 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth=3):
 def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
               ngens=2000, popsize=1, print_every=200, st_maxdepth=3, init_popsize=1):
     """Hill-climbing optimisation. """
-    assert(print_every % popsize == 0)
 
     fitness_fn = fitness.benchmarks(fitness_fn_key)
     set_fns_leaves(fitness_fn.arity)        
@@ -473,10 +473,10 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
                 t, ft, fnt = si, fsi, fnsi
 
         evals += popsize
-        if evals % print_every == 0:
+        if gen % print_every == 0:
             length = iter_len(traverse(t))
             print("%d %d %f %f %d : %s" % (gen, evals, 
                                         ft, fitness_fn.test(fnt), length, str(t)))
-        
+
 if __name__ == "__main__":
-    hillclimb("GOLD1h", "GSGP-one-tree", 200, 100, 100, 3, 100)
+    hillclimb("GOLD1h", "GSGP-one-tree", 100, 100, 1, 3, 100)
