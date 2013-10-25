@@ -41,9 +41,20 @@ def eval_or_exec(expr):
         # Will be thrown by eval(s) or exec(s) if s contains over-deep
         # nesting (see http://bugs.python.org/issue3971). The amount
         # of nesting allowed varies between versions, is quite low in
-        # Python2.5. If we can't evaluate, phenotype is marked
-        # invalid.
-        retval = None
+        # Python2.5. If we can't evaluate, there is an awful hack:
+        # write out a file and import from it. This works because the
+        # compiler itself is not recursive, whereas eval() is. 
+        try:
+            import imp, tempfile
+            f = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py")
+            f.write("XXXeval_or_exec_outputXXX = " + expr)
+            f.close()
+            m = imp.load_source("tmp", f.name)
+            retval = m.XXXeval_or_exec_outputXXX
+        except MemoryError:
+            # But there is still a limit on the depth which can be
+            # evaluated. If we hit that limit, then give up.
+            retval = None
     return retval
 
 def default_fitness(maximise):
@@ -389,10 +400,10 @@ class SymbolicRegressionFitnessFunction:
             try:
                 fn = eval(fn)
             except MemoryError:
-                return default_fitness(self.maximise), None
                 # print("MemoryError in get_semantics()")
                 # self.memo[s, test] = default_fitness(self.maximise), None
                 # return self.memo[s, test] 
+                return default_fitness(self.maximise), None
             
         try:
             if not test:
