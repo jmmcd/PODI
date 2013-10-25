@@ -442,17 +442,20 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
         # make a lot of new individuals by mutation
         if mutation_type == "GSGP-optimal-ms":
             # Mutate and differentiate to get the best possibility
-            s = [semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth)
+            s = [semantic_geometric_mutate_differentiate(t, fitness_fn,
+                                                         st_maxdepth)
                  for i in range(popsize)]
                 
         elif mutation_type == "GSGP":
             # mutation step size randomly chosen
-            s = [semantic_geometric_mutate(t, np.random.normal(), st_maxdepth, one_tree=False)
+            s = [semantic_geometric_mutate(t, np.random.normal(),
+                                           st_maxdepth, one_tree=False)
                  for i in range(popsize)]
 
         elif mutation_type == "GSGP-one-tree":
             # mutation step size randomly chosen
-            s = [semantic_geometric_mutate(t, np.random.normal(), st_maxdepth, one_tree=True)
+            s = [semantic_geometric_mutate(t, np.random.normal(),
+                                           st_maxdepth, one_tree=True)
                  for i in range(popsize)]
             
         elif mutation_type == "GP":
@@ -462,7 +465,6 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
             raise ValueError("Unknown mutation type " + mutation_type)
 
         # test the new individuals and keep only the single best
-        # 
         for si in s:
             # Evaluate child
             fnsi = make_fn(si)
@@ -475,8 +477,9 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
         evals += popsize
         if gen % print_every == 0:
             length = iter_len(traverse(t))
-            print("%d %d %f %f %d : %s" % (gen, evals, 
-                                        ft, fitness_fn.test(fnt), length, str(t)))
+            print("%d %d %f %f %d : %s" % (gen, evals, ft,
+                                           fitness_fn.test(fnt),
+                                           length, str(t)))
 
 if __name__ == "__main__":
-    hillclimb("GOLD1h", "GSGP-one-tree", 100, 100, 1, 3, 100)
+    hillclimb("GOLD1h", "GSGP", 100, 100, 1, 3, 100)
