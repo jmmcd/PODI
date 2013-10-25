@@ -203,8 +203,9 @@ def get_subtree(t, path):
     return t
 
 def tree_depth(t):
-    """The depth of a tree is the maximum depth of any of its nodes.
-    FIXME if a bare node is passed-in, this will crash."""
+    """The depth of a tree is the maximum depth of any of its
+    nodes."""
+    if isatom(t): return 0
     d = 0
     for nd, st, path in traverse(t):
         dn = depth(path)
@@ -412,8 +413,8 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth=3):
     return ['+', t, ['*', ms, tr]]
 
 
-def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
-              ngens=2000, popsize=1, print_every=200, st_maxdepth=3, init_popsize=1):
+def hillclimb(fitness_fn_key, mutation_type="optimal_ms", st_maxdepth=3, 
+              ngens=200, popsize=1, init_popsize=1, print_every=10):
     """Hill-climbing optimisation. """
 
     fitness_fn = fitness.benchmarks(fitness_fn_key)
@@ -477,9 +478,23 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
         evals += popsize
         if gen % print_every == 0:
             length = iter_len(traverse(t))
+            # This is horrible: if t is just a single variable eg x0,
+            # then str(t) -> x0, instead of 'x0'. Hack around it.
+            if isatom(t):
+                str_t = "'" + t + "'"
+            else:
+                str_t = str(t)
             print("%d %d %f %f %d : %s" % (gen, evals, ft,
                                            fitness_fn.test(fnt),
-                                           length, str(t)))
+                                           length, str_t))
 
 if __name__ == "__main__":
-    hillclimb("GOLD1h", "GSGP", 100, 100, 1, 3, 100)
+    fitness_fn = sys.argv[1]
+    mutation_type = sys.argv[2]
+    popsize = int(sys.argv[3])
+    init_popsize = int(sys.argv[4])
+    ngens = int(sys.argv[5])
+    st_maxdepth = int(sys.argv[6])
+    print_every = 1
+    hillclimb(fitness_fn, mutation_type, st_maxdepth,
+              ngens, popsize, init_popsize, print_every)
