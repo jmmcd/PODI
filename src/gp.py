@@ -10,6 +10,7 @@ import sys
 import random
 import collections
 import copy
+import itertools
 import cPickle
 from hashlib import sha1
 import sys
@@ -50,7 +51,7 @@ def set_fns_leaves(nvars):
     constants = [-1.0, -0.1, 0.1, 1.0]
     leaves = variables + constants
     fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "sqrt": 1, "square": 1}
-
+    
 fns = {}
 leaves = []
 
@@ -202,8 +203,9 @@ def get_subtree(t, path):
     return t
 
 def tree_depth(t):
-    """The depth of a tree is the maximum depth of any of its nodes.
-    FIXME if a bare node is passed-in, this will crash."""
+    """The depth of a tree is the maximum depth of any of its
+    nodes."""
+    if isatom(t): return 0
     d = 0
     for nd, st, path in traverse(t):
         dn = depth(path)
@@ -411,10 +413,9 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth=3):
     return ['+', t, ['*', ms, tr]]
 
 
-def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
-              ngens=2000, popsize=1, print_every=200, st_maxdepth=3, init_popsize=1):
+def hillclimb(fitness_fn_key, mutation_type="optimal_ms", st_maxdepth=3, 
+              ngens=200, popsize=1, init_popsize=1, print_every=10):
     """Hill-climbing optimisation. """
-    assert(print_every % popsize == 0)
 
     fitness_fn = fitness.benchmarks(fitness_fn_key)
     set_fns_leaves(fitness_fn.arity)        
@@ -442,7 +443,8 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
         # make a lot of new individuals by mutation
         if mutation_type == "GSGP-optimal-ms":
             # Mutate and differentiate to get the best possibility
-            s = [semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth)
+            s = [semantic_geometric_mutate_differentiate(t, fitness_fn,
+                                                         st_maxdepth)
                  for i in range(popsize)]
                 
         elif mutation_type == "GSGP":
@@ -452,7 +454,8 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
 
         elif mutation_type == "GSGP-one-tree":
             # mutation step size randomly chosen
-            s = [semantic_geometric_mutate(t, np.random.normal(), st_maxdepth, one_tree=True)
+            s = [semantic_geometric_mutate(t, np.random.normal(),
+                                           st_maxdepth, one_tree=True)
                  for i in range(popsize)]
             
         elif mutation_type == "GP":
@@ -462,7 +465,6 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
             raise ValueError("Unknown mutation type " + mutation_type)
 
         # test the new individuals and keep only the single best
-        # 
         for si in s:
             # Evaluate child
             fnsi = make_fn(si)
@@ -473,10 +475,25 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
                 t, ft, fnt = si, fsi, fnsi
 
         evals += popsize
-        if evals % print_every == 0:
+        if gen % print_every == 0:
             length = iter_len(traverse(t))
-            print("%d %d %f %f %d : %s" % (gen, evals, 
-                                        ft, fitness_fn.test(fnt), length, str(t)))
-        
+            # This is horrible: if t is just a single variable eg x0,
+            # then str(t) -> x0, instead of 'x0'. Hack around it.
+            if isatom(t):
+                str_t = "'" + t + "'"
+            else:
+                str_t = str(t)
+            print("%d %d %f %f %d : %s" % (gen, evals, ft,
+                                           fitness_fn.test(fnt),
+                                           length, str_t))
+
 if __name__ == "__main__":
-    hillclimb("GOLD1h", "GSGP-one-tree", 200, 100, 100, 3, 100)
+    fitness_fn = sys.argv[1]
+    mutation_type = sys.argv[2]
+    popsize = int(sys.argv[3])
+    init_popsize = int(sys.argv[4])
+    ngens = int(sys.argv[5])
+    st_maxdepth = int(sys.argv[6])
+    print_every = 1
+    hillclimb(fitness_fn, mutation_type, st_maxdepth,
+              ngens, popsize, init_popsize, print_every)
