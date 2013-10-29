@@ -627,6 +627,14 @@ def benchmarks(key):
         return SymbolicRegressionFitnessFunction.init_from_data_file(
             "../data/bioavailability.txt", split=0.7, randomise=True)
 
+    elif key == "vanneschi-protein":
+        return SymbolicRegressionFitnessFunction.init_from_data_file(
+            "../data/ppb.txt", split=0.7, randomise=True)
+
+    elif key == "vanneschi-toxicity":
+        return SymbolicRegressionFitnessFunction.init_from_data_file(
+            "../data/toxicity.txt", split=0.7, randomise=True)
+
     elif key == "dow-chemical-tower":
         return SymbolicRegressionFitnessFunction.init_from_data_file(
             "../data/towerData.txt", split=0.7, randomise=True)
