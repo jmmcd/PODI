@@ -446,8 +446,8 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
                  for i in range(popsize)]
                 
         elif mutation_type == "GSGP":
-            # mutation step size randomly chosen
-            s = [semantic_geometric_mutate(t, np.random.normal(), st_maxdepth, one_tree=False)
+            # ms=0.001 as in Moraglio
+            s = [semantic_geometric_mutate(t, 0.001, st_maxdepth, one_tree=False)
                  for i in range(popsize)]
 
         elif mutation_type == "GSGP-one-tree":
