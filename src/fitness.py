@@ -10,6 +10,7 @@ import numpy as np
 from numpy import add, subtract, multiply, divide, sin, cos, exp, log, power, square
 from numpy import logical_and, logical_or, logical_xor, logical_not
 np.seterr(all='raise', under='ignore')
+from sklearn.linear_model import LinearRegression, ElasticNet
 try:
     import editdist
 except:
@@ -306,7 +307,7 @@ class SymbolicRegressionFitnessFunction:
             d = np.genfromtxt(test_filename, delimiter=delimiter)
             test_X = d[:,:-1].T
             test_y = d[:,-1]
-        else:
+        elif split:
             # get data from same file for both train and test
             if randomise:
                 # shuffle the rows before allocating train/test
@@ -316,6 +317,10 @@ class SymbolicRegressionFitnessFunction:
             train_y = dy[:idx]
             test_X = dX[idx:].T
             test_y = dy[idx:]
+        else:
+            # same data for train and test
+            test_X = train_X = dX.T
+            test_y = train_y = dy
 
         # print "len(train_X), len(test_X)"
         # print len(train_X), len(test_X)
@@ -463,6 +468,30 @@ class SymbolicRegressionFitnessFunction:
             corr = 0.0
         return 1.0 - corr * corr
 
+    def predict_constant(self):
+        """How well can we do on this SRFF by predicting a
+        constant?"""
+        mn = np.mean(self.train_y)
+        # generate a constant column
+        yhat = np.ones_like(self.test_y) * mn
+        err = self.defn(self.test_y, yhat)
+        return mn, err
+
+    def predict_linear(self, enet=True):
+        """How well can we do on this SRFF with a linear regression
+        (with optional elastic-net regularisation)?"""
+        if enet:
+            clf = ElasticNet()
+        else:
+            clf = LinearRegression()
+        # we have to transpose X here because sklearn uses the
+        # opposite order (rows v columns). maybe this is a sign that
+        # I'm using the wrong order.
+        clf.fit(self.train_X.T, self.train_y)
+        yhat = clf.predict(self.test_X.T)
+        err = self.defn(self.test_y, yhat)
+        return clf.intercept_, clf.coef_, err
+    
     @staticmethod
     def build_random_cases(minv, maxv, n):
         """Create a list of n lists, each list being x-coordinates for a
