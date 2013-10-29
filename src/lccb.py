@@ -1,14 +1,22 @@
 #!/usr/bin/env python
 
+# LCEB: linear combination of evolved bases
+
+# Keep a list of randomly-generated basis functions. At each step, use
+# linear regression with regularisation to combine them. Replace the
+# one with lowest coefficient with a new tree.
+
 # LCCB: linear combination of coevolved bases
 
 # Use coevolution to evolve a population of basis functions. Use
-# linear regression with regularisation to combine them.
+# linear regression with regularisation to combine them. Award fitness
+# on the basis of their coefficients.
 
-# This idea is inspired by the best bits of fast function extraction
-# (McConaghy) -- a linear regression to get the best coefficients of
-# basis functions -- and geometric semantic GP (Moraglio et al) --
-# evolution to search among a more flexible choice of basis functions.
+# These ideas are inspired by the best bits of fast function
+# extraction (McConaghy) -- a linear regression to get the best
+# coefficients of basis functions -- and geometric semantic GP
+# (Moraglio et al) -- evolution to search among a more flexible choice
+# of basis functions.
 
 import os
 import sys
@@ -21,13 +29,65 @@ from zss.test_tree import Node
 import numpy as np
 from numpy import add, subtract, multiply, divide, sin, cos, exp, log, power, square, sqrt
 np.seterr(all='raise', under='ignore')
-from sklearn.linear_model import enet_path, ElasticNetCV
+from sklearn.linear_model import enet_path, ElasticNetCV, ElasticNet, LinearRegression
+from operator import itemgetter
 
 import structure
 import fitness
 import variga
 from bubble_down import generate_bubble_down_tree_and_fn, generate_grow_tree_and_fn, generate_bubble_down_tree_and_fn_minn_maxn, generate_grow_tree_and_fn_maxd
 import gp
+
+def argabsmin(L):
+    return min(enumerate(L), key=lambda x: abs(x[1]))
+
+def LCEB(fitness_fn, ngens, popsize, st_maxdepth):
+    """Linear combination of evolved bases. There is a single
+    individual composed of many randomly-generated trees. At each
+    step, we take them as bases for a GLM, fit, and look at their
+    coefficients. Any tree which has a small coefficient is not
+    helping much: replace it with a new randomly-generated tree, and
+    repeat.
+
+    FIXME problem: it rewards trees which require huge coefficients,
+    ie hardly do anything."""
+
+    y = fitness_fn.train_y
+
+    # make initial population
+    pop = [gp.grow(st_maxdepth, random) for i in range(popsize)]
+    
+    for gen in xrange(ngens):
+
+        X = None
+        for ind in pop:
+            fit, col = fitness_fn.get_semantics(gp.make_fn(ind))
+            if (fit != sys.maxint
+                and all(np.isfinite(col))):
+                pass
+            else:
+                print("Omitting a column")
+                col = np.zeros(len(y))
+            if X is None:
+                X = col
+            else:
+                X = np.c_[X, col]
+
+        print("X")
+        print(X.shape)
+        print(X)
+        model = LinearRegression()
+        model.fit(X, y)
+        coefs = model.coef_
+        output = model.predict(X)
+        rmse = fitness_fn.rmse(y, output)
+        print("rmse", rmse)
+        print("coefs", coefs)
+        
+        worst_idx, worst_val = argabsmin(coefs)
+        print("worst tree")
+        print(pop[worst_idx])
+        pop[worst_idx] = gp.grow(st_maxdepth, random)
 
 def LCCB_coevo(fitness_fn, pop):
     y = fitness_fn.train_y
@@ -106,4 +166,6 @@ def run(fitness_fn, rep="bubble_down"):
 if __name__ == "__main__":
     srff = fitness.benchmarks("pagie-2d")
     gp.set_fns_leaves(srff.arity)
-    run(srff)
+    # run(srff)
+
+    LCEB(srff, 10, 5, 2)
