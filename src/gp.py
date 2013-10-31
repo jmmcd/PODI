@@ -283,8 +283,10 @@ def crossover(t1, t2):
         i1 += 1
     return t1, t2
 
-def subtree_mutate(t, st_maxdepth=3):
-    """Mutate a tree by growing a new subtree at a random location."""
+def subtree_mutate(t, maxdepth=12):
+    """Mutate a tree by growing a new subtree at a random location.
+    Impose a limit for the whole tree (not the new tree) of
+    maxdepth."""
     
     # this deepcopy is necessary, but will be slow
     t = copy.deepcopy(t)
@@ -301,7 +303,8 @@ def subtree_mutate(t, st_maxdepth=3):
         i = 0
         for nd, st, path in traverse(t):
             if i == s:
-                place_subtree_at_path(t, path, grow(st_maxdepth, random))
+                place_subtree_at_path(t, path,
+                                      grow(maxdepth-depth(path), random))
                 break
             i += 1
         return t
@@ -421,7 +424,7 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms", st_maxdepth=3,
     set_fns_leaves(fitness_fn.arity)        
     evals = 0
     
-    print("# generation evaluations best_fitness best_test_fitness best_phenotype")
+    print("#generation evaluations best_fitness best_test_fitness best_phenotype_length best_phenotype")
     # Generate an initial solution and make sure it doesn't return an
     # error because if it does, in GSGP that error will always be present.
     si_out = None
@@ -459,7 +462,7 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms", st_maxdepth=3,
                  for i in range(popsize)]
             
         elif mutation_type == "GP":
-            s = [subtree_mutate(t, st_maxdepth)
+            s = [subtree_mutate(t)
                  for i in range(popsize)]
         else:
             raise ValueError("Unknown mutation type " + mutation_type)
@@ -490,10 +493,10 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms", st_maxdepth=3,
 if __name__ == "__main__":
     fitness_fn = sys.argv[1]
     mutation_type = sys.argv[2]
-    popsize = int(sys.argv[3])
-    init_popsize = int(sys.argv[4])
-    ngens = int(sys.argv[5])
-    st_maxdepth = int(sys.argv[6])
-    print_every = 1
+    st_maxdepth = int(sys.argv[3])
+    ngens = int(sys.argv[4])
+    popsize = int(sys.argv[5])
+    init_popsize = int(sys.argv[6])
+    print_every = int(sys.argv[7])
     hillclimb(fitness_fn, mutation_type, st_maxdepth,
               ngens, popsize, init_popsize, print_every)
