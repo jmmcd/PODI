@@ -26,7 +26,7 @@ def eval_or_exec(expr):
     expression (not a statement) and the latter does not return
     anything."""
 
-    #print(s)
+    # print(expr)
     try:
         retval = eval(expr)
     except SyntaxError:
