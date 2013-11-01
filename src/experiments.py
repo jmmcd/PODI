@@ -62,6 +62,8 @@ def read_dir(dirname):
                 popsizes, init_popsizes)
 
     returnss = {}
+
+    raw_returns = read_raw_returns()
     
     for item in p:
         (fitness_fn, mutation_type, st_maxdepth, 
@@ -72,14 +74,19 @@ def read_dir(dirname):
         ngens = eval_budget / popsize
         key = "_".join(map(str, item))
 
-        outfilename = dirname + "/" + key + "_generations"
-        fig = figure(figsize=(6, 4))
+        outfilename = dirname + "/" + key
+        fig = figure(figsize=(4, 3))
         ax = fig.add_subplot(111)
         ax.set_xlabel("Evaluations")
-        ax.set_ylabel("Training Fitness")
-        ax.set_title(key)
+        ax.set_ylabel("RMSE (Training)")
+        # ax.set_title(key)
+        fig2 = figure(figsize=(4, 3))
+        ax2 = fig2.add_subplot(111)
+        ax2.set_xlabel("Time-steps")
+        ax2.set_ylabel("Accumulated Returns")
+        # ax2.set_title(key)
 
-        final_fitness = []
+        returns_to_plot = []
         for rep in range(reps):
             filename = dirname + "/" + key + "_" + str(rep) + "_numbers.dat"
             d = np.genfromtxt(filename).T
@@ -87,19 +94,27 @@ def read_dir(dirname):
             # read in the phenotype separately
             last_tree = open(dirname + "/" + key + "_" + str(rep) + "_trees.dat"
                              ).read().strip("\n").split("\n")[-1]
-            retrn = get_accumulated_returns(last_tree, fitness_fn)
-            returnss[fitness_fn, mutation_type, st_maxdepth, popsize,
-                     init_popsize, rep] = retrn
-            # final_fitnesses.append(d[2][-1])
+            returns = get_accumulated_returns(last_tree, fitness_fn, raw_returns)
+            returns_to_plot.append((d[2][-1], returns))
 
-            # plot in grey with 0.5 alpha
+            # plot in grey with transparency
             ax.plot(d[1], d[2],
-                    linewidth=2.0, color=(0.2, 0.2, 0.2, 0.5))
+                    linewidth=3.0, color=(0.3, 0.3, 0.3, 0.6))
 
-        fig.savefig(outfilename + ".pdf")
-        # fig.close()
 
-    print returnss
+        # pick 3 best on training data (RMSE) to run on test data
+        returns_to_plot.sort(key=lambda x: x[0])
+        for fitness, returns in returns_to_plot[:3]:
+            ax2.plot(range(len(returns)), returns,
+                     linewidth=3.0, color=(0.3, 0.3, 0.3, 0.6))
+
+        fig.savefig(outfilename + "_generations.pdf")
+        fig2.savefig(outfilename + "_returns.pdf")
+        
+        fig.clf()
+        fig2.clf()
+
+    #print returnss
         
     
 def process_hillclimb_dir(dirname):
@@ -255,14 +270,31 @@ def print_data(rep, dist, bpdata):
     #         cmean, cstddev, cps, cmedian))
     # print(r"\end{tabular}")
 
-def get_accumulated_returns(ind_s, key):
+def read_raw_returns():
+    fitness_fns = ["GOLD5m", "GOLD1h", "GU5m", "GU1h", "SP5005m", "SP5001h"]
+    d = {}
+    for key in fitness_fns:
+        r_t = np.genfromtxt("../data/finance/" + key + ".txt").T[0]
+        d[key] = r_t
+    return d
+
+def get_accumulated_returns(ind_s, key, raw_returns_d):
     """Given an individual and fitness function, calculate its
     accumulated return."""
     ind = make_fn(fitness.eval_or_exec(ind_s))
     srff = fitness.SymbolicRegressionFitnessFunction.init_from_data_file(
-        "../data/finance/" + key + "_gsgp.dat", split=0.7, defn="trading")
-    return srff.test(ind)
-
+        "../data/finance/" + key + "_gsgp.dat", split=0.7, defn="rmse")
+    rmse_fit, yhat = srff.get_semantics(ind, test=True)
+    if yhat is None:
+        print "yhat is None"
+        print ind_s
+        return np.zeros_like(srff.test_y)
+    raw_returns = raw_returns_d[key][-len(yhat):]
+    # sign(yhat) says whether we buy or short, raw_returns is the true outcome
+    our_returns = np.sign(yhat) * raw_returns
+    accum_returns = np.add.accumulate(our_returns)
+    print len(accum_returns)
+    return accum_returns
     
 def run1(fn, args, rep, to_file=True):
     """Unused for now."""
@@ -287,8 +319,8 @@ def LBYL_experiment(run=True):
     fitness_fns = ["GOLD5m", "GOLD1h", "GU5m", "GU1h", "SP5005m", "SP5001h"]
     mutation_types = ["GP", "GSGP", "GSGP-one-tree", "GSGP-optimal-ms"]
     eval_budget = 40000
-    st_maxdepths = [2, 3]
-    popsizes = [1000]
+    st_maxdepths = [2]
+    popsizes = [500]
     init_popsizes = [1, "large"]
     print_every = 1
 
@@ -374,5 +406,5 @@ if __name__ == "__main__":
     read_dir("/Users/jmmcd/Documents/results/GSGP_finance/budget_4000/")
     # s = "['*', ['+', -0.1, ['+', ['+', ['/', ['*', ['+', ['sin', 'x0'], ['square', 'x0']], ['+', 1.0, ['sqrt', 1.0]]], ['+', -1.0, 'x6']], ['+', ['+', 'x7', 'x3'], ['-', 'x6', 'x0']]], ['sqrt', ['square', 'x5']]]], ['+', ['square', ['/', 'x0', -0.1]], ['*', 'x0', 1.0]]]"
     # k = "GOLD5m"
-    # print evaluate_finance_individual(s, k)
+    # print get_accumulated_returns(s, k)
     

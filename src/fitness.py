@@ -289,9 +289,6 @@ class SymbolicRegressionFitnessFunction:
         elif defn == "hits":
             self.maximise = True
             self.defn = self.hits_fitness
-        elif defn == "trading":
-            self.maximise = True
-            self.defn = self.trading_fitness
         else:
             raise ValueError("Bad value for fitness definition: " + defn)
 
@@ -423,8 +420,8 @@ class SymbolicRegressionFitnessFunction:
             # return self.memo[s, test] 
 
         except FloatingPointError as fpe:
-            return default_fitness(self.maximise), None
             # print("FloatingPointError in get_semantics()")
+            return default_fitness(self.maximise), None
             # self.memo[s, test] = default_fitness(self.maximise), None
             # return self.memo[s, test] 
         except ValueError as ve:
@@ -507,14 +504,6 @@ class SymbolicRegressionFitnessFunction:
         err = self.defn(self.test_y, yhat)
         return clf.intercept_, clf.coef_, err
     
-    @staticmethod
-    def trading_fitness(y, yhat):
-        """At each time-step (ie data point), we either buy or short
-        based on whether our predicted return yhat is positive or
-        negative. If we buy, we gain the true return y (which could be
-        negative). If we short, we gain minus the true return y."""
-        return np.sum(np.sign(yhat) * y)
-
     @staticmethod
     def build_random_cases(minv, maxv, n):
         """Create a list of n lists, each list being x-coordinates for a
