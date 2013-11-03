@@ -51,10 +51,10 @@ def read_dir(dirname):
 
     fitness_fns = ["GOLD5m", "GOLD1h", "GU5m", "GU1h", "SP5005m", "SP5001h"]
     mutation_types = ["GP", "GSGP", "GSGP-one-tree", "GSGP-optimal-ms"]
-    eval_budget = 4000
-    st_maxdepths = [3]
-    popsizes = [100]
-    init_popsizes = [1, 100]
+    eval_budget = 10000
+    st_maxdepths = [2, 3]
+    popsizes = [500]
+    init_popsizes = [1, "large"]
     print_every = 1
     reps = 10
 
@@ -84,7 +84,10 @@ def read_dir(dirname):
         ax2 = fig2.add_subplot(111)
         ax2.set_xlabel("Time-steps")
         ax2.set_ylabel("Accumulated Returns")
-        # ax2.set_title(key)
+        fig3 = figure(figsize=(4, 3))
+        ax3 = fig3.add_subplot(111)
+        ax3.set_xlabel("Time-steps")
+        ax3.set_ylabel("Accumulated Returns")
 
         returns_to_plot = []
         for rep in range(reps):
@@ -94,8 +97,20 @@ def read_dir(dirname):
             # read in the phenotype separately
             last_tree = open(dirname + "/" + key + "_" + str(rep) + "_trees.dat"
                              ).read().strip("\n").split("\n")[-1]
-            returns = get_accumulated_returns(last_tree, fitness_fn, raw_returns)
-            returns_to_plot.append((d[2][-1], returns))
+            returns, sig = get_accumulated_returns(last_tree,
+                                                   fitness_fn,
+                                                   raw_returns)
+
+            if returns[-1] > 0 and sig:
+                to_print = (fitness_fn, mutation_type, st_maxdepth, 
+                            popsize, init_popsize, 1)
+            else:
+                to_print = (fitness_fn, mutation_type, st_maxdepth, 
+                            popsize, init_popsize, 0)
+            print("result %s %s %d %d %d %d" % to_print)
+
+
+            returns_to_plot.append((d[2][-1], returns, sig))
 
             # plot in grey with transparency
             ax.plot(d[1], d[2],
@@ -104,15 +119,19 @@ def read_dir(dirname):
 
         # pick 3 best on training data (RMSE) to run on test data
         returns_to_plot.sort(key=lambda x: x[0])
-        for fitness, returns in returns_to_plot[:3]:
+        for fitness, returns, sig in returns_to_plot[:]:
             ax2.plot(range(len(returns)), returns,
+                     linewidth=3.0, color=(0.3, 0.3, 0.3, 0.6))
+            ax3.plot(range(50), returns[:50],
                      linewidth=3.0, color=(0.3, 0.3, 0.3, 0.6))
 
         fig.savefig(outfilename + "_generations.pdf")
         fig2.savefig(outfilename + "_returns.pdf")
+        fig3.savefig(outfilename + "_returns_timesteps_50.pdf")
         
         fig.clf()
         fig2.clf()
+        fig3.clf()
 
     #print returnss
         
@@ -288,14 +307,49 @@ def get_accumulated_returns(ind_s, key, raw_returns_d):
     if yhat is None:
         print "yhat is None"
         print ind_s
-        return np.zeros_like(srff.test_y)
+        return np.zeros_like(srff.test_y), False
     raw_returns = raw_returns_d[key][-len(yhat):]
     # sign(yhat) says whether we buy or short, raw_returns is the true outcome
     our_returns = np.sign(yhat) * raw_returns
     accum_returns = np.add.accumulate(our_returns)
     print len(accum_returns)
-    return accum_returns
-    
+    sig = chi2test(raw_returns, yhat)
+    return accum_returns, sig
+
+def chi2test(y, yhat):
+    signy = np.sign(y)
+    signyhat = np.sign(yhat)
+    m = np.zeros((3, 3))
+    m[1, 1] = np.sum(np.logical_and(signy > 0, signyhat > 0))
+    m[1, 2] = np.sum(np.logical_and(signy > 0, signyhat <= 0))
+    m[2, 1] = np.sum(np.logical_and(signy <= 0, signyhat > 0))
+    m[2, 2] = np.sum(np.logical_and(signy <= 0, signyhat <= 0))
+    m[0, 1] = m[1, 1] + m[2, 1]
+    m[0, 2] = m[1, 2] + m[2, 2]
+    m[1, 0] = m[1, 1] + m[1, 2]
+    m[2, 0] = m[2, 1] + m[2, 2]
+    m[0, 0] = m[1, 0] + m[2, 0]
+    print m
+    assert m[0, 0] == m[0, 1] + m[0, 2]
+    try:
+        x = sum(
+            sum(
+                ((m[i, j] - m[i, 0] * m[0, j] / m[0, 0]) ** 2.0)
+                /
+                (m[i, 0] * m[0, j] / m[0, 0])
+                for j in range(1, 3))
+            for i in range(1, 3)
+            )
+    except FloatingPointError:
+        # can happen eg if rule predicts "up" for every data point
+        return False
+    # This magic number is the threshold value for chi^2 distribution
+    # of 1 degree of freedom at 5% significance level
+    if x > 3.8415:
+        return True
+    else:
+        return False
+
 def run1(fn, args, rep, to_file=True):
     """Unused for now."""
     s = "_".join(str(arg) for arg in args) + "_rep-" + str(rep)
@@ -403,7 +457,7 @@ def split_data_files(dirname):
 if __name__ == "__main__":
     # split_data_files("/Users/jmmcd/Documents/results/GSGP_finance/budget_10000")
     # LBYL_experiment(run=True)
-    read_dir("/Users/jmmcd/Documents/results/GSGP_finance/budget_4000/")
+    read_dir("/Users/jmmcd/Dropbox/GSGP-ideas-papers/finance/budget_10000/")
     # s = "['*', ['+', -0.1, ['+', ['+', ['/', ['*', ['+', ['sin', 'x0'], ['square', 'x0']], ['+', 1.0, ['sqrt', 1.0]]], ['+', -1.0, 'x6']], ['+', ['+', 'x7', 'x3'], ['-', 'x6', 'x0']]], ['sqrt', ['square', 'x5']]]], ['+', ['square', ['/', 'x0', -0.1]], ['*', 'x0', 1.0]]]"
     # k = "GOLD5m"
     # print get_accumulated_returns(s, k)
