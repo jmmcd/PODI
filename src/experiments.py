@@ -51,9 +51,9 @@ def read_dir(dirname):
 
     fitness_fns = ["GOLD5m", "GOLD1h", "GU5m", "GU1h", "SP5005m", "SP5001h"]
     mutation_types = ["GP", "GSGP", "GSGP-one-tree", "GSGP-optimal-ms"]
-    eval_budget = 10000
-    st_maxdepths = [2, 3]
-    popsizes = [500]
+    eval_budget = 4000
+    st_maxdepths = [3]
+    popsizes = [100]
     init_popsizes = [1, "large"]
     print_every = 1
     reps = 10
@@ -72,7 +72,8 @@ def read_dir(dirname):
             init_popsize = popsize
         ngens = round((eval_budget - init_popsize) / float(popsize))
         ngens = eval_budget / popsize
-        key = "_".join(map(str, item))
+        key = "_".join(map(str, [fitness_fn, mutation_type, st_maxdepth,
+                                 popsize, init_popsize]))
 
         outfilename = dirname + "/" + key
         fig = figure(figsize=(4, 3))
@@ -101,14 +102,14 @@ def read_dir(dirname):
                                                    fitness_fn,
                                                    raw_returns)
 
-            if returns[-1] > 0 and sig:
-                to_print = (fitness_fn, mutation_type, st_maxdepth, 
-                            popsize, init_popsize, 1)
-            else:
-                to_print = (fitness_fn, mutation_type, st_maxdepth, 
-                            popsize, init_popsize, 0)
-            print("result %s %s %d %d %d %d" % to_print)
-
+            to_print = (fitness_fn, mutation_type, st_maxdepth, 
+                        popsize, init_popsize,
+                        d[2][-1],
+                        returns[50] > 0,
+                        returns[100] > 0,
+                        returns[-1] > 0,
+                        sig)
+            print("result %s %s %d %d %d %f %d %d %d %d" % to_print)
 
             returns_to_plot.append((d[2][-1], returns, sig))
 
@@ -455,9 +456,10 @@ def split_data_files(dirname):
         os.system(cmd)
 
 if __name__ == "__main__":
-    # split_data_files("/Users/jmmcd/Documents/results/GSGP_finance/budget_10000")
+    dirname = "/Users/jmmcd/Dropbox/GSGP-ideas-papers/finance/budget_4000/"
+    # split_data_files(dirname)
+    read_dir(dirname)
     # LBYL_experiment(run=True)
-    read_dir("/Users/jmmcd/Dropbox/GSGP-ideas-papers/finance/budget_10000/")
     # s = "['*', ['+', -0.1, ['+', ['+', ['/', ['*', ['+', ['sin', 'x0'], ['square', 'x0']], ['+', 1.0, ['sqrt', 1.0]]], ['+', -1.0, 'x6']], ['+', ['+', 'x7', 'x3'], ['-', 'x6', 'x0']]], ['sqrt', ['square', 'x5']]]], ['+', ['square', ['/', 'x0', -0.1]], ['*', 'x0', 1.0]]]"
     # k = "GOLD5m"
     # print get_accumulated_returns(s, k)
