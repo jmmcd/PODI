@@ -25,7 +25,7 @@ np.seterr(all='raise', under='ignore')
 import structure
 import fitness
 import variga
-import bubble_down
+import bubble_down as bd
 
 mutation_prob = 0.01
 
@@ -51,7 +51,7 @@ def set_fns_leaves(nvars):
     constants = [-1.0, -0.1, 0.1, 1.0]
     leaves = variables + constants
     fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "sqrt": 1, "square": 1}
-    
+
 fns = {}
 leaves = []
 
@@ -297,7 +297,7 @@ def subtree_mutate(t, maxdepth=12):
     if s == 0:
         # mutate at root: return an entirely new tree. can't be done
         # using place_subtree_at_path as below
-        return grow(st_maxdepth, random)
+        return grow(maxdepth, random)
     else:
         # don't mutate at root
         i = 0
@@ -338,7 +338,8 @@ def point_mutate(t, p=mutation_prob):
     return t
             
             
-def semantic_geometric_mutate(t, ms=0.01, st_maxdepth=3, one_tree=False):
+def semantic_geometric_mutate(t, ms=0.001, rt_size=3,
+                              one_tree=False, rt_method="grow"):
     """Semantic geometric mutation as defined by Moraglio et al:
 
     tm = t + ms * (tr1 - tr2)
@@ -348,15 +349,28 @@ def semantic_geometric_mutate(t, ms=0.01, st_maxdepth=3, one_tree=False):
 
     Set one_tree=True to use tm = t + ms * tr1. Make sure ms is
     symmetric about zero in that case.
+
+    Set rt_method="grow" to use standard GP grow method. rt_size
+    will give max depth. Use "bubble_down" to generate using
+    bubble-down method. rt_size will give number of nodes.
     """
 
-    tr1 = grow(st_maxdepth, random)
+    if rt_method == "grow":
+        tr1 = grow(rt_size, random)
+    else:
+        tr1 = bd.bubble_down(rt_size, random)[0]
     if one_tree:
         return ['+', t, ['*', ms, tr1]]
-    tr2 = grow(st_maxdepth, random)
+    if rt_method == "grow":
+        tr2 = grow(rt_size, random)
+    elif rt_method == "bubble_down":
+        tr2 = bd.bubble_down(rt_size, random)[0]
+    else:
+        raise ValueError
     return ['+', t, ['*', ms, ['-', tr1, tr2]]]
 
-def semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth=3):
+def semantic_geometric_mutate_differentiate(t, fitness_fn, rt_size=3,
+                                            rt_method="grow"):
     """Semantic geometric mutation with differentiation:
 
     tm = t + ms * tr
@@ -366,6 +380,10 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth=3):
     RMSE(y, t + ms * tr) with respect to ms. To make this work the
     mutation operator needs to be able to evaluate, so we have to pass
     in the fitness function.
+
+    Set rt_method="grow" to use standard GP grow method. rt_size
+    will give max depth. Use "bubble_down" to generate using
+    bubble-down method. rt_size will give number of nodes.
 
     The optimum mutation step ms is such that RMSE is minimised. But
     minimising RMSE is equivalent to minimising mean square error
@@ -394,7 +412,12 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth=3):
     # get into the while loop.
     tr_out = None
     while (tr_out is None) or (np.mean(tr_out**2) < 0.000001):
-        tr = grow(st_maxdepth, random)
+        if rt_method == "grow":
+            tr = grow(rt_size, random)
+        elif rt_method == "bubble_down":
+            tr = bd.bubble_down(rt_size, random)[0]
+        else:
+            raise ValueError
         _, tr_out = fitness_fn.get_semantics(make_fn(tr))
         #print(s)
         # if s_tr[1] is not None and np.sum(s_tr[1]) > 0.0000001:
@@ -416,12 +439,13 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn, st_maxdepth=3):
     return ['+', t, ['*', ms, tr]]
 
 
-def hillclimb(fitness_fn_key, mutation_type="optimal_ms", st_maxdepth=3, 
+def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
+              rt_method="grow", rt_size=3, 
               ngens=200, popsize=1, init_popsize=1, print_every=10):
     """Hill-climbing optimisation. """
 
     fitness_fn = fitness.benchmarks(fitness_fn_key)
-    set_fns_leaves(fitness_fn.arity)        
+    set_fns_leaves(fitness_fn.arity)
     evals = 0
     
     print("#generation evaluations best_fitness best_test_fitness best_phenotype_length best_phenotype")
@@ -430,7 +454,13 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms", st_maxdepth=3,
     si_out = None
     ft = float(sys.maxint)
     while si_out is None:
-        s = [grow(st_maxdepth, random) for i in range(init_popsize)]
+        if rt_method == "grow":
+            s = [grow(rt_size, random) for i in range(init_popsize)]
+        elif rt_method == "bubble_down":
+            s = [bd.bubble_down(rt_size, random)[0] for i in range(init_popsize)]
+        else:
+            raise ValueError
+
         for si in s:
             # Evaluate child
             fnsi = make_fn(si)
@@ -447,22 +477,28 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms", st_maxdepth=3,
         if mutation_type == "GSGP-optimal-ms":
             # Mutate and differentiate to get the best possibility
             s = [semantic_geometric_mutate_differentiate(t, fitness_fn,
-                                                         st_maxdepth)
+                                                         rt_size=rt_size,
+                                                         rt_method=rt_method)
                  for i in range(popsize)]
                 
         elif mutation_type == "GSGP":
             # ms=0.001 as in Moraglio
-            s = [semantic_geometric_mutate(t, 0.001, st_maxdepth, one_tree=False)
+            s = [semantic_geometric_mutate(t, 0.001,
+                                           rt_size=rt_size,
+                                           one_tree=False,
+                                           rt_method=rt_method)
                  for i in range(popsize)]
 
         elif mutation_type == "GSGP-one-tree":
             # mutation step size randomly chosen
             s = [semantic_geometric_mutate(t, np.random.normal(),
-                                           st_maxdepth, one_tree=True)
+                                           rt_size=rt_size,
+                                           one_tree=True,
+                                           rt_method=rt_method)
                  for i in range(popsize)]
             
         elif mutation_type == "GP":
-            s = [subtree_mutate(t)
+            s = [subtree_mutate(t, maxdepth=rt_size)
                  for i in range(popsize)]
         else:
             raise ValueError("Unknown mutation type " + mutation_type)
@@ -493,10 +529,12 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms", st_maxdepth=3,
 if __name__ == "__main__":
     fitness_fn = sys.argv[1]
     mutation_type = sys.argv[2]
-    st_maxdepth = int(sys.argv[3])
-    ngens = int(sys.argv[4])
-    popsize = int(sys.argv[5])
-    init_popsize = int(sys.argv[6])
-    print_every = int(sys.argv[7])
-    hillclimb(fitness_fn, mutation_type, st_maxdepth,
+    rt_method = sys.argv[3]
+    rt_size = int(sys.argv[4])
+    ngens = int(sys.argv[5])
+    popsize = int(sys.argv[6])
+    init_popsize = int(sys.argv[7])
+    print_every = int(sys.argv[8])
+    hillclimb(fitness_fn, mutation_type, rt_method,
+              rt_size,
               ngens, popsize, init_popsize, print_every)
