@@ -18,17 +18,17 @@ except:
     # back to the levenshtein function in structure.py in this case.)
     pass
 
-def eval_or_exec(expr):
-    """Use eval or exec to interpret expr.
+def eval_or_exec(s):
+    """Use eval or exec to interpret s.
 
     A limitation in Python is the distinction between eval and
     exec. The former can only be used to return the value of a simple
     expression (not a statement) and the latter does not return
     anything."""
 
-    # print(expr)
+    print(s)
     try:
-        retval = eval(expr)
+        retval = eval(s)
     except SyntaxError:
         # SyntaxError will be thrown by eval() if s is compound,
         # ie not a simple expression, eg if it contains function
@@ -36,7 +36,7 @@ def eval_or_exec(expr):
         # exec(). Then we assume that s will define a variable
         # called "XXXeval_or_exec_outputXXX", and we'll use that.
         dictionary = {}
-        exec(expr, dictionary)
+        exec(s, dictionary)
         retval = dictionary["XXXeval_or_exec_outputXXX"]
     except MemoryError:
         # Will be thrown by eval(s) or exec(s) if s contains over-deep
@@ -44,11 +44,11 @@ def eval_or_exec(expr):
         # of nesting allowed varies between versions, is quite low in
         # Python2.5. If we can't evaluate, there is an awful hack:
         # write out a file and import from it. This works because the
-        # compiler itself is not recursive, whereas eval() is. 
+        # compiler itself is not recursive, whereas eval() is.
         try:
             import imp, tempfile
             f = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py")
-            f.write("XXXeval_or_exec_outputXXX = " + expr)
+            f.write("XXXeval_or_exec_outputXXX = " + s)
             f.close()
             m = imp.load_source("tmp", f.name)
             retval = m.XXXeval_or_exec_outputXXX
@@ -149,7 +149,7 @@ class BooleanProblem:
     # implementation.
     def __init__(self, n, target):
         self.maximise = False
-        
+
         # make all possible fitness cases
         vals = [False, True]
         p = list(product(*[vals for i in range(n)]))
@@ -169,7 +169,7 @@ class BooleanProblem:
 
     def __call__(self, s):
         return self.get_semantics(s)[0]
-    
+
     def test(self, ind):
         # TODO should allow for a proper train/test suite
         return self(ind)
@@ -228,7 +228,7 @@ class ProbabilityDistributionFitnessFunction:
     is a number between 0 and 1, and regard fn as the generating
     function of the distribution, ie the inverse of the cumulative
     distribution function."""
-    
+
     def __init__(self, x, n=100):
         # from pymc import *
         # samples from an unknown distribution to be matched
@@ -259,8 +259,8 @@ class ProbabilityDistributionFitnessFunction:
         # words, smaller D means the distributions are more similar.
         # So we're aiming to minimise D.
         return ks_2samp(self.x, fn_data)[0], fn_data
-        
-    
+
+
 class SymbolicRegressionFitnessFunction:
     """Fitness function for symbolic regression problems. Yes, it's a
     Verb in the Kingdom of Nouns
@@ -370,7 +370,7 @@ class SymbolicRegressionFitnessFunction:
 
         # Testing data -- FIXME this could be neater.
         if test1 and test2:
-            testing_cases = cls.build_column_mesh_np(cls.build_cases(**test1) + 
+            testing_cases = cls.build_column_mesh_np(cls.build_cases(**test1) +
                                                            cls.build_cases(**test2))
             testing_values = target(testing_cases)
         elif test1:
@@ -404,9 +404,9 @@ class SymbolicRegressionFitnessFunction:
             except MemoryError:
                 # print("MemoryError in get_semantics()")
                 # self.memo[s, test] = default_fitness(self.maximise), None
-                # return self.memo[s, test] 
+                # return self.memo[s, test]
                 return default_fitness(self.maximise), None
-            
+
         try:
             if not test:
                 vals_at_cases = fn(self.train_X)
@@ -417,13 +417,13 @@ class SymbolicRegressionFitnessFunction:
 
             return fit, vals_at_cases
             # self.memo[s, test] = fit, vals_at_cases
-            # return self.memo[s, test] 
+            # return self.memo[s, test]
 
         except FloatingPointError as fpe:
             # print("FloatingPointError in get_semantics()")
             return default_fitness(self.maximise), None
             # self.memo[s, test] = default_fitness(self.maximise), None
-            # return self.memo[s, test] 
+            # return self.memo[s, test]
         except ValueError as ve:
             print("ValueError: " + str(ve) +':' + str(fn))
             raise
@@ -503,7 +503,7 @@ class SymbolicRegressionFitnessFunction:
         yhat = clf.predict(self.test_X.T)
         err = self.defn(self.test_y, yhat)
         return clf.intercept_, clf.coef_, err
-    
+
     @staticmethod
     def build_random_cases(minv, maxv, n):
         """Create a list of n lists, each list being x-coordinates for a
@@ -587,7 +587,7 @@ def benchmarks(key):
         return SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: x,
             {"minv": [0.0], "maxv": [1.0], "incrv": [0.1]})
-    
+
     elif key == "vladislavleva-12":
         return SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: exp(-x[0]) * power(x[0], 3.0) * cos(x[0]) * sin(x[0]) \
@@ -647,21 +647,21 @@ def benchmarks(key):
     elif key in ["GOLD1h", "GOLD5m", "GU1h", "GU5m", "SP5001h", "SP5005m"]:
         return SymbolicRegressionFitnessFunction.init_from_data_file(
             "../data/finance/" + key + "_gsgp.dat", split=0.7)
-            
+
 
     # FIXME not sure how to implement this -- x[0] is a column,
-    # so we can't take range(x[0])... 
+    # so we can't take range(x[0])...
     # elif key == "keijzer-6":
     #     return SymbolicRegressionFitnessFunction.init_from_target_fn(
     #         lambda x: sum(1.0/i for i in range(x[0])),
     #         {"minv": [1], "maxv": [50], "incrv": [1]},
     #         test1={"minv": [1], "maxv": [120], "incrv": [1]})
-        
+
 
     else:
         print "Unknown benchmark problem " + key
 
-    
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         print("Usage: fitness.py <keyword>.")
@@ -715,7 +715,7 @@ if __name__ == "__main__":
         sr = benchmarks("vanneschi_bioavailability")
         g = "lambda x: x[0]*x[1]"
         print(sr(g))
-        
+
     elif sys.argv[1] == "test_sr_mesh":
         test_build_mesh()
     elif sys.argv[1] == "test_sr_random":
