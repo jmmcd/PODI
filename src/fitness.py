@@ -18,17 +18,17 @@ except:
     # back to the levenshtein function in structure.py in this case.)
     pass
 
-def eval_or_exec(s):
-    """Use eval or exec to interpret s.
+def eval_or_exec(expr):
+    """Use eval or exec to interpret expr.
 
     A limitation in Python is the distinction between eval and
     exec. The former can only be used to return the value of a simple
     expression (not a statement) and the latter does not return
     anything."""
 
-    print(s)
+    # print(expr)
     try:
-        retval = eval(s)
+        retval = eval(expr)
     except SyntaxError:
         # SyntaxError will be thrown by eval() if s is compound,
         # ie not a simple expression, eg if it contains function
@@ -36,7 +36,7 @@ def eval_or_exec(s):
         # exec(). Then we assume that s will define a variable
         # called "XXXeval_or_exec_outputXXX", and we'll use that.
         dictionary = {}
-        exec(s, dictionary)
+        exec(expr, dictionary)
         retval = dictionary["XXXeval_or_exec_outputXXX"]
     except MemoryError:
         # Will be thrown by eval(s) or exec(s) if s contains over-deep
@@ -48,7 +48,7 @@ def eval_or_exec(s):
         try:
             import imp, tempfile
             f = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py")
-            f.write("XXXeval_or_exec_outputXXX = " + s)
+            f.write("XXXeval_or_exec_outputXXX = " + expr)
             f.close()
             m = imp.load_source("tmp", f.name)
             retval = m.XXXeval_or_exec_outputXXX
@@ -289,6 +289,9 @@ class SymbolicRegressionFitnessFunction:
         elif defn == "hits":
             self.maximise = True
             self.defn = self.hits_fitness
+        elif defn == "classification_accuracy":
+            self.maximise = True
+            self.defn = self.class_acc_fitness
         else:
             raise ValueError("Bad value for fitness definition: " + defn)
 
@@ -466,6 +469,16 @@ class SymbolicRegressionFitnessFunction:
         Minimise 1 - the proportion."""
         errors = abs(yhat - y)
         return 1 - np.mean(errors < 0.01)
+
+    @staticmethod
+    def class_acc_fitness(y, yhat):
+        """Classification accuracy fitness: how many of the
+        predictions are of the same sign as the correct value?
+        Maximise."""
+        signy = np.sign(y)
+        signyhat = np.sign(yhat)
+        tp_plus_tn = np.count_nonzero((signy * signyhat) >= 0)
+        return tp_plus_tn / float(len(y))
 
     @staticmethod
     def correlation_fitness(y, yhat):
@@ -647,6 +660,11 @@ def benchmarks(key):
     elif key in ["GOLD1h", "GOLD5m", "GU1h", "GU5m", "SP5001h", "SP5005m"]:
         return SymbolicRegressionFitnessFunction.init_from_data_file(
             "../data/finance/" + key + "_gsgp.dat", split=0.7)
+
+    elif key in ["GOLD1h_class", "GOLD5m_class", "GU1h_class", "GU5m_class", "SP5001h_class", "SP5005m_class"]:
+        return SymbolicRegressionFitnessFunction.init_from_data_file(
+            "../data/finance/" + key[:-6] + "_gsgp.dat", split=0.7,
+            defn="classification_accuracy")
 
 
     # FIXME not sure how to implement this -- x[0] is a column,

@@ -226,36 +226,38 @@ def LBYL_experiment(run=True):
                      # "evocompetitions-2010",
                      # "vanneschi-bioavailability", "pagie-2d"]
     fitness_fns = ["GOLD5m", "GU5m", "SP5005m"]
-    mutation_types = ["GSGP", "GSGP-one-tree", "GSGP-optimal-ms"]
-    eval_budget = 1000
+    mutation_types = ["GP", "GSGP", "GSGP-one-tree", "GSGP-optimal-ms"]
+    # mutation_types = ["GSGP-one-tree", "GSGP-optimal-ms"]
+    eval_budget = 20000
     rt_methods = ["grow"]
-    rt_sizes = [3]
-    popsizes = [100]
-    init_popsizes = [1, "large"]
+    rt_sizes = [2]
+    popsizes = [500]
+    init_popsizes = ["large"]
     print_every = 1
 
-    p = product(fitness_fns, mutation_types,
+    p = product(reps, fitness_fns, mutation_types,
                 rt_methods, rt_sizes,
-                popsizes, init_popsizes, reps)
+                popsizes, init_popsizes)
 
     for item in p:
-        (fitness_fn, mutation_type, rt_method, rt_size,
-         popsize, init_popsize, rep) = item
+        (rep, fitness_fn, mutation_type, rt_method, rt_size,
+         popsize, init_popsize) = item
         if init_popsize == "large":
             init_popsize = popsize
-        filename = "/Users/jmmcd/Dropbox/GSGP-ideas-papers/finance/budget_1000/" + "_".join(map(str, item)) + ".dat"
+        filename = "/Users/jmmcd/Dropbox/GSGP-ideas-papers/finance/budget_20000_nlags_20/" + "_".join(map(str, item)) + ".dat"
         ngens = round((eval_budget - init_popsize) / float(popsize))
-        print (fitness_fn, mutation_type,
-               rt_method, rt_size,
-               ngens,
-               popsize, init_popsize, print_every)
+        # print (fitness_fn, mutation_type,
+        #        rt_method, rt_size,
+        #        ngens,
+        #        popsize, init_popsize, print_every)
+        rt_method = "grow"
 
         if run:
             cmd = "python gp.py %s %s %s %d %d %d %d %d " % (
                 fitness_fn, mutation_type, rt_method, rt_size,
                 ngens, popsize, init_popsize, print_every)
-            print cmd
             redirect = " > " + filename
+            print cmd + redirect
             # run this as a system command, redirecting output to a file,
             # because it avoids danger of leaking memory if everything is
             # inside a single big process
@@ -288,20 +290,33 @@ def LBYL_experiment(run=True):
 
 def split_data_files(dirname):
     for file in glob.glob(dirname + "/*.dat"):
-        if "_numbers" in file or "_trees" in file:
+        if "_numbers.dat" in file or "_trees.dat" in file or "_returns.dat" in file or "_gens.dat" in file:
             # already done
             continue
-        cmd = "cut -f1 -d':' " + file + " > " + file[:-4] + "_numbers.dat"
-        print cmd
-        os.system(cmd)
-        cmd = "cut -f2 -d':' " + file + " > " + file[:-4] + "_trees.dat"
-        print cmd
-        os.system(cmd)
+
+        # assume 39 lines of generations and 418 of returns
+        headout = file[:-4] + "_gens.dat"
+        head = "head -39 " + file + " > " + headout
+        tailout = file + " > " + file[:-4] + "_returns.dat"
+        tail = "tail -418 " + file + " > " + tailout
+        cut1out = file[:-4] + "_numbers.dat"
+        cut1 = "cut -f1 -d':' " + headout + " > " + cut1out
+        cut2out = file[:-4] + "_trees.dat"
+        cut2 = "cut -f2 -d':' " + headout + " > " + cut2out
+
+        print head
+        print tail
+        print cut1
+        print cut2
+        # os.system(head)
+        # os.system(tail)
+        # os.system(cut1)
+        # os.system(cut2)
 
 if __name__ == "__main__":
-    dirname = "/Users/jmmcd/Dropbox/GSGP-ideas-papers/finance/budget_40000/"
-    # split_data_files(dirname)
-    #LBYL_experiment(run=True)
+    dirname = "/Users/jmmcd/Dropbox/GSGP-ideas-papers/finance/budget_20000_nlags_20/"
+    split_data_files(dirname)
+    # LBYL_experiment(run=True)
     # s = "['*', ['+', -0.1, ['+', ['+', ['/', ['*', ['+', ['sin', 'x0'], ['square', 'x0']], ['+', 1.0, ['sqrt', 1.0]]], ['+', -1.0, 'x6']], ['+', ['+', 'x7', 'x3'], ['-', 'x6', 'x0']]], ['sqrt', ['square', 'x5']]]], ['+', ['square', ['/', 'x0', -0.1]], ['*', 'x0', 1.0]]]"
     # k = "GOLD5m"
     # print get_accumulated_returns(s, k)

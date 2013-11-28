@@ -20,11 +20,28 @@ import gp
 # import nonrandom
 # random = nonrandom.NonRandom([999999999, 0, 17] * 100)
 
+# FIXME this is a hack for experiments, don't commit!
+nvars = 9
+variables = ["x" + str(i) for i in range(nvars)]
+
+# consider allowing all the distributions here
+# [http://docs.scipy.org/doc/numpy/reference/routines.random.html] as
+# primitives in the pdff. Consider at least normal, Poisson, beta,
+# uniform, exponential, lognormal, weibull.
+
+# For now, RAND just gives a uniform.
+# variables = ["RAND"] # see evaluate() above
+
+constants = [-1.0, -0.1, 0.1, 1.0]
+leaves = variables + constants
+fns = {"+": 2, "-": 2, "*": 2, "/": 2, "sin": 1, "sqrt": 1, "square": 1}
+
+
 def mknd(rng):
     """Make a bubble-down node, consisting of a label, weights, and a
     bias term."""
-    lbl = rng.choice(gp.fns.keys())
-    arity = gp.fns[lbl]
+    lbl = rng.choice(fns.keys())
+    arity = fns[lbl]
 
     # Slight optimisation: the real code is this:
     # wts = sorted([rng.random() for i in range(arity - 1)])
@@ -43,7 +60,7 @@ def mkst(rng):
     """Make a bubble-down subtree, consisting of a bubble-down node
     and the appropriate number of null children."""
     nd = mknd(rng)
-    return [nd] + [None] * gp.fns[nd[0]]
+    return [nd] + [None] * fns[nd[0]]
 
 def choose_child(weights, val):
     """Calculate an index, ie the slot where val fits, given val (in
@@ -58,7 +75,7 @@ def bubble_down_minn_maxn(minn, maxn, rng):
     maxn (or exceeds maxn by up to (maximum arity - 1). We can fix
     bounds in advance, and let evolution control tree size."""
     n = rng.randint(minn, maxn)
-    return bubble_down(n, rng)    
+    return bubble_down(n, rng)
 
 def bubble_down(n, rng):
     """Generate a tree of the desired node-count (can exceed it by up
@@ -84,7 +101,7 @@ def bubble_down(n, rng):
     optimisation."""
 
     if n <= 1:
-        return [rng.choice(gp.leaves)]
+        return [rng.choice(leaves)]
     t = mkst(rng)
     node_cnt = len(t)
     max_depth = 0
@@ -120,7 +137,7 @@ def add_leaves_remove_annotations(t, rng, with_replacement=True):
     result = [t[0][0]] # first [0] gets node, second [0] gets label
     for item in t[1:]:
         if item is None:
-            result.append(rng.choice(gp.leaves)) # fill in a leaf
+            result.append(rng.choice(leaves)) # fill in a leaf
         else:
             result.append(add_leaves_remove_annotations(item, rng))
     return result
@@ -258,8 +275,6 @@ def run(fitness_fn_key, rep="bubble_down"):
     variga.TOURNAMENT_SIZE = 3
     variga.WRAPS = 1
     variga.main()
-
-
 
 
 if __name__ == "__main__":

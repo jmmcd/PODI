@@ -37,7 +37,7 @@ mutation_prob = 0.01
 def set_fns_leaves(nvars):
     global fns
     global leaves
-    
+
     variables = ["x" + str(i) for i in range(nvars)]
 
     # consider allowing all the distributions here
@@ -82,7 +82,7 @@ def plog(x):
         return 0.0
     else:
         return log(x)
-        
+
 
 class MemoizeMutable:
     """Based on Martelli's memoize (see fitness.py) but changed ad-hoc
@@ -96,7 +96,7 @@ class MemoizeMutable:
         s = sha1(args[1]).hexdigest() + sha1(str(args[0])).hexdigest()
         # s = str(tuple(args[1].T[0])) + str(args[0])
         # print s
-        if not self.memo.has_key(s): 
+        if not self.memo.has_key(s):
             # print "miss"  # DEBUG INFO
             self.memo[s] = self.fn(*args, **kwds)
         else:
@@ -117,7 +117,7 @@ def _evaluate(t, x):
         # it's a single string
         if t[0] == "x":
             idx = int(t[1:])
-            return x[idx] 
+            return x[idx]
         elif t == "x": return x[0]
         elif t == "y": return x[1]
         # special var generates a random var uniformly in [0, 1].
@@ -265,7 +265,7 @@ def crossover(t1, t2):
 
     # Choose crossover points s1, s2 -- don't crossover at root
     n1 = iter_len(traverse(t1))
-    s1 = random.randint(1, n1-1) 
+    s1 = random.randint(1, n1-1)
     i1 = 0
     n2 = iter_len(traverse(t2))
     s2 = random.randint(1, n2-1)
@@ -287,10 +287,10 @@ def subtree_mutate(t, maxdepth=12):
     """Mutate a tree by growing a new subtree at a random location.
     Impose a limit for the whole tree (not the new tree) of
     maxdepth."""
-    
+
     # this deepcopy is necessary, but will be slow
     t = copy.deepcopy(t)
-     
+
     n = iter_len(traverse(t))
     s = random.randint(0, n-1)
 
@@ -308,12 +308,12 @@ def subtree_mutate(t, maxdepth=12):
                 break
             i += 1
         return t
-    
+
 def point_mutate(t, p=mutation_prob):
     """Point mutation of a tree. Traverse the tree. For each node,
     with low probability, replace it with another node of same
     arity."""
-    
+
     # this deepcopy is necessary, but will be slow
     t = copy.deepcopy(t)
 
@@ -336,14 +336,14 @@ def point_mutate(t, p=mutation_prob):
                 if options:
                     place_subtree_at_path(t, path, random.choice(options))
     return t
-            
-            
+
+
 def semantic_geometric_mutate(t, ms=0.001, rt_size=3,
                               one_tree=False, rt_method="grow"):
     """Semantic geometric mutation as defined by Moraglio et al:
 
     tm = t + ms * (tr1 - tr2)
-    
+
     where ms is the mutation step (make it small for local search),
     and tr1 and tr2 are randomly-generated trees.
 
@@ -374,7 +374,7 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn, rt_size=3,
     """Semantic geometric mutation with differentiation:
 
     tm = t + ms * tr
-    
+
     where tr is a randomly-generated tree and ms is the mutation step,
     which can be negative, found by diffentiating the new error
     RMSE(y, t + ms * tr) with respect to ms. To make this work the
@@ -394,16 +394,16 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn, rt_size=3,
         = mean((y-t)**2 - 2*(y-t)*ms*tr + ms**2*tr**2)
 
     Differentiate wrt ms:
-    
+
     d(MSE)/d(ms) = mean(-2*(y-t)*tr + 2*ms*tr**2)
                  = -2*mean((y-t)*tr) + 2*ms*mean(tr**2)
-                 
+
     This is zero when:
-    
+
     2*mean((y-t)*tr) = 2*ms*mean(tr**2)
-	
+
     Therefore the optimum ms is:
-    
+
     ms = mean((y-t)*tr) / mean(tr**2)"""
 
 
@@ -435,20 +435,67 @@ def semantic_geometric_mutate_differentiate(t, fitness_fn, rt_size=3,
     # again, for a kind of ad-hoc regularisation. The threshold could
     # be annealed during the run, perhaps. For now, just accept the
     # step regardless.
-    
+
     return ['+', t, ['*', ms, tr]]
 
 
+def accum_returns(raw_returns, yhat):
+    returns = np.sign(yhat) * raw_returns
+    retval = np.add.accumulate(returns)
+    sig_50 = chi2test(raw_returns[:50], yhat[:50])
+    sig_100 = chi2test(raw_returns[:100], yhat[:100])
+    sig_end = chi2test(raw_returns, yhat)
+    return retval, sig_50, sig_100, sig_end
+
+
+def chi2test(y, yhat):
+    signy = np.sign(y)
+    signyhat = np.sign(yhat)
+    m = np.zeros((3, 3))
+    m[1, 1] = np.sum(np.logical_and(signy > 0, signyhat > 0))
+    m[1, 2] = np.sum(np.logical_and(signy > 0, signyhat <= 0))
+    m[2, 1] = np.sum(np.logical_and(signy <= 0, signyhat > 0))
+    m[2, 2] = np.sum(np.logical_and(signy <= 0, signyhat <= 0))
+    m[0, 1] = m[1, 1] + m[2, 1]
+    m[0, 2] = m[1, 2] + m[2, 2]
+    m[1, 0] = m[1, 1] + m[1, 2]
+    m[2, 0] = m[2, 1] + m[2, 2]
+    m[0, 0] = m[1, 0] + m[2, 0]
+    assert m[0, 0] == m[0, 1] + m[0, 2]
+    try:
+        x = sum(
+            sum(
+                ((m[i, j] - m[i, 0] * m[0, j] / m[0, 0]) ** 2.0)
+                /
+                (m[i, 0] * m[0, j] / m[0, 0])
+                for j in range(1, 3))
+            for i in range(1, 3)
+            )
+    except FloatingPointError:
+        # can happen eg if rule predicts "up" for every data point
+        return False
+    # This magic number is the threshold value for chi^2 distribution
+    # of 1 degree of freedom at 5% significance level
+    if x > 3.8415:
+        return True
+    else:
+        return False
+
+
 def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
-              rt_method="grow", rt_size=3, 
+              rt_method="grow", rt_size=3,
               ngens=200, popsize=1, init_popsize=1, print_every=10):
     """Hill-climbing optimisation. """
 
     fitness_fn = fitness.benchmarks(fitness_fn_key)
+    extra_fitness_fn = fitness.benchmarks(fitness_fn_key + "_class")
     set_fns_leaves(fitness_fn.arity)
     evals = 0
-    
-    print("#generation evaluations best_fitness best_test_fitness best_phenotype_length best_phenotype")
+
+    raw_returns = np.genfromtxt("/Users/jmmcd/Dropbox/GSGP-ideas-papers/finance/" +
+                                fitness_fn_key + ".txt").T[0][-418:]
+
+    print("#generation evaluations fitness_rmse fitness_rmse_test class_acc class_acc_test returns_50 sig_50 returns_100 sig_100 returns_end sig_end best_phenotype_length best_phenotype")
     # Generate an initial solution and make sure it doesn't return an
     # error because if it does, in GSGP that error will always be present.
     si_out = None
@@ -470,7 +517,7 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
             if fsi < ft:
                 t, ft, fnt = si, fsi, fnsi
         evals += init_popsize
-        
+
     for gen in xrange(ngens):
 
         # make a lot of new individuals by mutation
@@ -480,7 +527,7 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
                                                          rt_size=rt_size,
                                                          rt_method=rt_method)
                  for i in range(popsize)]
-                
+
         elif mutation_type == "GSGP":
             # ms=0.001 as in Moraglio
             s = [semantic_geometric_mutate(t, 0.001,
@@ -496,9 +543,10 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
                                            one_tree=True,
                                            rt_method=rt_method)
                  for i in range(popsize)]
-            
+
         elif mutation_type == "GP":
-            s = [subtree_mutate(t, maxdepth=rt_size)
+            # don't use rt_size since it's = 2. use 12, the default
+            s = [subtree_mutate(t)
                  for i in range(popsize)]
         else:
             raise ValueError("Unknown mutation type " + mutation_type)
@@ -513,6 +561,8 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
             if fsi < ft:
                 t, ft, fnt = si, fsi, fnsi
 
+        test_rmse, yhat_test = fitness_fn.get_semantics(fnt, test=True)
+
         evals += popsize
         if gen % print_every == 0:
             length = iter_len(traverse(t))
@@ -522,9 +572,23 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
                 str_t = "'" + t + "'"
             else:
                 str_t = str(t)
-            print("%d %d %f %f %d : %s" % (gen, evals, ft,
-                                           fitness_fn.test(fnt),
-                                           length, str_t))
+
+            returns, sig_50, sig_100, sig_end = accum_returns(raw_returns, yhat_test)
+            print("%d %d %f %f %f %f %f %d %f %d %f %d %d : %s" % (
+                    gen, evals,
+                    ft, test_rmse,
+                    extra_fitness_fn(fnt),
+                    extra_fitness_fn.test(fnt),
+                    returns[50],
+                    sig_50,
+                    returns[100],
+                    sig_100,
+                    returns[417],
+                    sig_end,
+                    length, str_t))
+
+    print "ACCUMULATE RETURNS"
+    for val in returns: print val
 
 if __name__ == "__main__":
     fitness_fn = sys.argv[1]
