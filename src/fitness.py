@@ -309,6 +309,9 @@ class SymbolicRegressionFitnessFunction:
         else:
             delimiter = None
         d = np.genfromtxt(filename, delimiter=delimiter)
+        if randomise:
+            # shuffle the rows before allocating train/test
+            np.random.shuffle(d)
         dX = d[:,:-1]
         dy = d[:,-1]
         if test_filename:
@@ -321,9 +324,6 @@ class SymbolicRegressionFitnessFunction:
             test_y = d[:,-1]
         elif split:
             # get data from same file for both train and test
-            if randomise:
-                # shuffle the rows before allocating train/test
-                np.random.shuffle(d)
             idx = int(split * len(d))
             train_X = dX[:idx].T
             train_y = dy[:idx]
@@ -712,7 +712,7 @@ if __name__ == "__main__":
         print(sr(g))
 
     elif sys.argv[1] == "test_bioavailability":
-        sr = benchmarks("vanneschi_bioavailability")
+        sr = benchmarks("vanneschi-bioavailability")
         g = "lambda x: x[0]*x[1]"
         print(sr(g))
 
