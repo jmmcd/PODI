@@ -590,6 +590,14 @@ def hillclimb(fitness_fn_key, mutation_type="optimal_ms",
     print "ACCUMULATE RETURNS"
     for val in returns: print val
 
+
+def read_trees_write_fitness_EuroGP2014(infile, outfile):
+    srff = fitness.benchmarks("pagie-2d")
+    out = open(outfile, "w")
+    for gp_tree in file(infile):
+        fitness_val = 1.0 / srff.get_semantics(make_fn(eval(gp_tree)))[0]
+        out.write(str(fitness_val) + "\n")
+
 if __name__ == "__main__":
     fitness_fn = sys.argv[1]
     mutation_type = sys.argv[2]
