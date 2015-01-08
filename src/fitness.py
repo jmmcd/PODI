@@ -614,6 +614,17 @@ def benchmarks(key):
             {"minv": [0.05]*5, "maxv": [6.05]*5, "randomx": True, "ncases": 1024},
             test1={"minv": [-0.25]*5, "maxv": [6.35]*5, "randomx": True, "ncases": 5000})
 
+    elif key == "korns-12":
+        # Note need to use bnf with x[0] -- x[4]
+        # FIXME the number of variables in the grammar should be inferred
+        # from the data
+        return SymbolicRegressionFitnessFunction.init_from_target_fn(
+            lambda x: 2.0 - (2.1 * (cos (9.8*x[0])*sin(1.3*x[1]))),
+            {"minv": [-50,-50,-50,-50,-50],
+             "maxv": [50,50,50,50,50], "randomx": True, "ncases": 10000},
+            test1={"minv": [-50,-50,-50,-50,-50],
+                   "maxv": [50,50,50,50,50,50], "randomx": True, "ncases": 10000})
+
     elif key == "pagie-2d":
         return SymbolicRegressionFitnessFunction.init_from_target_fn(
             lambda x: (1 / (1 + x[0] ** -4) + 1 / (1 + x[1] ** -4)),
@@ -717,7 +728,7 @@ if __name__ == "__main__":
         print(m(fn1))
 
     elif sys.argv[1] == "test_sr":
-        sr = benchmarks("vladislavleva_12")
+        sr = benchmarks("vladislavleva-12")
         g = "lambda x: 2*x"
         print(sr(g))
         sr = benchmarks("identity")
@@ -725,7 +736,7 @@ if __name__ == "__main__":
         print(sr(g))
 
     elif sys.argv[1] == "test_pagie":
-        sr = benchmarks("pagie_2d")
+        sr = benchmarks("pagie-2d")
         g = "lambda x: (1 / (1 + x[0] ** -4) + 1 / (1 + x[1] ** -4))"
         print(sr(g))
 
