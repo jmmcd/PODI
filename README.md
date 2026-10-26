@@ -42,3 +42,7 @@ approaches to genetic programming.
 
 Authors: James McDermott and Paula Carroll, Management Information
 Systems, Quinn School of Business, University College Dublin, Ireland.
+
+# Update 2026
+
+To see the water tower in action in 2026, the easiest way is to use [http://www.jmmcd.net/Anemone/](http://www.jmmcd.net/Anemone/#WaterTower)
